@@ -1,0 +1,175 @@
+<html>
+
+<head>
+<link rel="shortcut icon" type="image/png" href="/favicon.png"/>
+<title>Controle do aquecedor solar</title>
+
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+                        $('#heater-on').click(  function () {
+                                $.ajax({
+                                        url: '/heater/on/9999',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#heater-off').click(  function () {
+                                $.ajax({
+                                        url: '/heater/off/9999',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#heater-auto').click(  function () {
+                                $.ajax({
+                                        url: '/heater/auto',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#pump-auto').click(  function () {
+                                $.ajax({
+                                        url: '/pump/auto',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#pump-off').click(  function () {
+                                $.ajax({
+                                        url: '/pump/off/9999',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+                });
+
+        function showData(data) {
+                        $("#heater-range").html(data.heaterOnTemperature + "&#8451; a " + data.heaterOffTemperature + "&#8451;");
+                        $("#panel-temp").html(data.solarPanelTemperature + "&#8451;");
+                        if (data.boilerTemperature > 5 && data.boilerTemperature < 70) {
+                                $("#boilerTemperature").html(data.boilerTemperature + "&#8451;");
+                        }
+                        if(data.tempOverride && data.heaterEnabled) {
+                                $("#heater-off").removeClass("active");
+                                $("#heater-auto").removeClass("active");
+                                $("#heater-on").addClass("active");
+                        } else if (data.tempOverride && !data.heaterEnabled) {
+                                $("#heater-off").addClass("active");
+                                $("#heater-auto").removeClass("active");
+                                $("#heater-on").removeClass("active");
+                        } else {
+                                $("#heater-off").removeClass("active");
+                                $("#heater-auto").addClass("active");
+                                $("#heater-on").removeClass("active");
+                        }
+
+                        if(data.pumpOverride) {
+                                $("#pump-off").addClass("active");
+                                $("#pump-auto").removeClass("active");
+                        } else {
+                                $("#pump-off").removeClass("active");
+                                $("#pump-auto").addClass("active");
+                        }
+
+                        if (data.heaterEnabled) {
+                                $("#heater-status").html("<i class=\"fas fa-check-circle text-success\"></i>&nbsp;&nbsp;Aquecedor");
+                        } else {
+                                $("#heater-status").html("<i class=\"fas fa-times-circle text-warning\"></i>&nbsp;&nbsp;Aquecedor");
+                        }
+
+                        if (data.tempOverride) {
+                                $("#heater-until").html("Manual at&eacute; " + formatDate(new Date(new Date().getTime() + data.heaterOverrideUntil)));
+                        } else {
+                                $("#heater-until").html("&nbsp;");
+                        }
+
+                        if (data.pumpEnabled) {
+                                $("#pump-status").html("<i class=\"fas fa-check-circle text-success\"></i>&nbsp;&nbsp;Bomba");
+                        } else {
+                                $("#pump-status").html("<i class=\"fas fa-times-circle text-warning\"></i>&nbsp;&nbsp;Bomba");
+                        }
+
+                        if (data.pumpOverride) {
+                                $("#pump-until").html("Manual at&eacute; " + formatDate(new Date(new Date().getTime() + data.pumpOverrideUntil)));
+                        } else {
+                                $("#pump-until").html("&nbsp;");
+                        }
+                }
+
+                function formatDate(date) {
+                        var hours = date.getHours();
+                        var minutes = date.getMinutes();
+                        minutes = minutes < 10 ? '0'+minutes : minutes;
+                        var strTime = hours + ':' + minutes + ' ';
+                        return date.getDate() + "/" + (date.getMonth()+1) + "  " + strTime;
+                }
+
+                var socket = io('http://localhost:8099');
+                socket.on('tempData', function (tempData) {
+                    console.log(tempData);
+                    showData(JSON.parse(tempData));
+                });
+    </script>
+</head>
+<body>
+        <br/>
+        <div class="container-fluid">
+                <nav class="navbar navbar-dark bg-primary">
+                  <span class="navbar-brand mb-0 h1">Controle do aquecedor solar</span>
+                </nav>
+                <div class="jumbotron">
+                        <div class="container-fluid">
+                                <div class="row">
+                                        <div class="col-sm">
+                                                <h1 class="display-2" id="boilerTemperature"></h1>
+                                                <p class="lead">Temperatura da &aacute;gua</p>
+                                        </div>
+                                        <div class="col-sm">
+                                                <h3 class="display-5" id="panel-temp"></h3>
+                                                <p class="lead">Temperatura das placas</p>
+                                                <h3 class="display-5" id="heater-range"></h3>
+                                                <p class="lead">Temp. aq. el&eacute;trico</p>
+                                        </div>
+                                        <div class="col-sm">
+                                                <h3 class="display-5" id="heater-status"></h3>
+                                                <p class="lead" id="heater-until">&nbsp;</p>
+                                                <h3 class="display-5" id="pump-status"></h3>
+                                                <p class="lead" id="pump-until">&nbsp;</p>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+                <h5>&nbsp;Aquecimento el&eacute;trico:</h5>
+                <div class="list-group">
+                  <a href="#" id="heater-off" class="list-group-item list-group-item-action">Desligado</a>
+                  <a href="#" id="heater-auto" class="list-group-item list-group-item-action">Autom&aacute;tico <span id="heater-status"></span></a>
+                  <a href="#" id="heater-on" class="list-group-item list-group-item-action">Ligado</a>
+                </div>
+                <br/>
+                <h5>&nbsp;Bomba de circula&ccedil;&atilde;o:</h5>
+                <div class="list-group">
+                  <a href="#" id="pump-off" class="list-group-item list-group-item-action">Desligada</a>
+                  <a href="#" id="pump-auto" class="list-group-item list-group-item-action">Autom&aacute;tica</a>
+                </div>
+        </div>
+</body>
+</html>
