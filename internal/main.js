@@ -5,7 +5,7 @@ var http = require('http');
 var io = require('socket.io-client');
 
 // Actuator connections config
-var actHost = '192.168.1.211';
+var actHost = 'arduino';
 var actPort = 80;
 var actuatorGetDataOptions = {
 	host: actHost,
@@ -42,13 +42,11 @@ var actuatorAutoPump = {
 }
 
 // Connect to web agent.
-// FIXME: Nomes para conexão ao invés de IPs
-webAgent = io.connect('http://127.0.0.1:8099');
+webAgent = io.connect('http://italopulga.ddns.net:8099');
 
 // Retrieve data from actuator each 3s
-var currentData;
 function getData() {
-	currentData = '';
+	var currentData = '';
 	http.request(actuatorGetDataOptions, function(res) {
 		res.on('data', function (chunk) {
     		currentData += chunk;
@@ -56,11 +54,13 @@ function getData() {
 		});
 	}).end();
 }
-setInterval(getData, 1000);
+getData();
+setInterval(getData, 15000);
 
 // Command handling
 // Heater on
 webAgent.on('heaterOn', function(timing) {
+	var currentData = '';
 	actuatorEnableHeater.path = '/heater/on/'+timing;
 	http.request(actuatorEnableHeater, function(res) {
 		res.on('data', function (chunk) {
@@ -72,6 +72,7 @@ webAgent.on('heaterOn', function(timing) {
 
 // Heater off
 webAgent.on('heaterOff', function (timing) {
+	var currentData = '';
 	actuatorDisableHeater.path = '/heater/off/'+timing;
 	http.request(actuatorDisableHeater, function(res) {
 		res.on('data', function (chunk) {
@@ -83,6 +84,7 @@ webAgent.on('heaterOff', function (timing) {
 
 // Heater auto
 webAgent.on('heaterAuto', function (dummy) {
+	var currentData = '';
 	http.request(actuatorAutoHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
@@ -93,6 +95,7 @@ webAgent.on('heaterAuto', function (dummy) {
 
 // Pump off
 webAgent.on('pumpOff', function (timing) {
+	var currentData = '';
 	actuatorDisablePump.path = '/pump/off/'+timing;
 	http.request(actuatorDisablePump, function(res) {
 		res.on('data', function (chunk) {
@@ -104,6 +107,7 @@ webAgent.on('pumpOff', function (timing) {
 
 // Pump auto
 webAgent.on('pumpAuto', function (dummy) {
+	var currentData = '';
 	http.request(actuatorAutoPump, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;

@@ -68,11 +68,11 @@
                         if (data.boilerTemperature > 5 && data.boilerTemperature < 70) {
                                 $("#boilerTemperature").html(data.boilerTemperature + "&#8451;");
                         }
-                        if(data.tempOverride && data.heaterEnabled) {
+                        if(data.heaterOverride && data.heaterEnabled) {
                                 $("#heater-off").removeClass("active");
                                 $("#heater-auto").removeClass("active");
                                 $("#heater-on").addClass("active");
-                        } else if (data.tempOverride && !data.heaterEnabled) {
+                        } else if (data.heaterOverride && !data.heaterEnabled) {
                                 $("#heater-off").addClass("active");
                                 $("#heater-auto").removeClass("active");
                                 $("#heater-on").removeClass("active");
@@ -96,7 +96,7 @@
                                 $("#heater-status").html("<i class=\"fas fa-times-circle text-warning\"></i>&nbsp;&nbsp;Aquecedor");
                         }
 
-                        if (data.tempOverride) {
+                        if (data.heaterOverride) {
                                 $("#heater-until").html("Manual at&eacute; " + formatDate(new Date(new Date().getTime() + data.heaterOverrideUntil)));
                         } else {
                                 $("#heater-until").html("&nbsp;");
@@ -123,7 +123,7 @@
                         return date.getDate() + "/" + (date.getMonth()+1) + "  " + strTime;
                 }
 
-                var socket = io('http://localhost:8099');
+                var socket = io('http://italopulga.ddns.net:8099');
                 socket.on('tempData', function (tempData) {
                     console.log(tempData);
                     showData(JSON.parse(tempData));
