@@ -1,3 +1,5 @@
+#!/usr/bin/env nodejs
+
 // Module setup
 var express = require('express');
 var app = express();
