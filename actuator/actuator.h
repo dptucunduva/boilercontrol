@@ -14,7 +14,7 @@
 #define ESP8266_SERIAL Serial1
 #define ESP8266_SPEED 115200
 #define WIFI_SERVER_PORT 80
-#define WIFI_SERVER_TIMEOUT 10
+#define WIFI_SERVER_TIMEOUT 5
 const String WIFI_SSID = "asdfasd-int";
 const String WIFI_PASSWORD = "*********";
 ESP8266 wifi(Serial1);
@@ -26,6 +26,8 @@ DeviceAddress solarPanelSensor = { 0x28, 0x9D, 0x1B, 0x77, 0x91, 0x06, 0x02, 0x5
 DeviceAddress boilerSensor = { 0x28, 0xFF, 0x9B, 0x09, 0xB3, 0x17, 0x01, 0x98 };
 
 // Temperature setup
+float boilerTemp = 45;
+float solarPanelTemp = 45;
 const float HEATER_ON_TEMP_DEFAULT = 27;
 const float HEATER_OFF_TEMP_DEFAULT = 38;
 const int heaterOnEepromAddr = 10;

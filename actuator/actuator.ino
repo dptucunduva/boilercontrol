@@ -30,6 +30,9 @@ void setup() {
 }
 
 void loop() {
+  // Update temperatures
+  updateTemp();
+  
   // Handle http request
   httpRequest();
 
@@ -43,16 +46,29 @@ void loop() {
 /**
  *  TEMPERATURE FUNCTIONS
  */
+// Get temperature readings from sensors
+void updateTemp() {
+  sensors.requestTemperatures();
+  float readBoilerTemp = sensors.getTempC(boilerSensor);
+  float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
+
+  // Workaround for eventual innacurate readings
+  if (readBoilerTemp > 5 && readBoilerTemp < 70) {
+    boilerTemp = readBoilerTemp;
+  }
+  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 70) {
+    solarPanelTemp = readSolarPanelTemp;
+  }
+}
+
 // Get current temperature
 float getBoilerTemp() {
-  sensors.requestTemperatures();
-  return sensors.getTempC(boilerSensor);
+  return boilerTemp;
 }
 
 // Get current temperature
 float getSolarPanelTemp() {
-  sensors.requestTemperatures();
-  return sensors.getTempC(solarPanelSensor);
+  return solarPanelTemp;
 }
 
 // Get Heater ON temperature
@@ -194,7 +210,6 @@ void httpRequest() {
     // Handle command
     String command = "";
     for (int i = 0; i < len; i++) {
-      Serial.print((char)buffer[i]);
       command += (char)buffer[i];
     }
     handleHttpCommand(mux_id, command);
@@ -206,7 +221,6 @@ void handleHttpCommand(uint8_t mux_id, String command) {
   // This is the response that will be built.
   String response;
 
-  Serial.println(command);
   if (command.startsWith("GET")) {
     response = getStatus();
   } else if (command.startsWith("PUT")) {
@@ -262,7 +276,8 @@ void handleHttpCommand(uint8_t mux_id, String command) {
 
   // Send response
   wifi.send(mux_id, (const uint8_t*)response.c_str(), response.length());
-  wifi.releaseTCP(mux_id);
+  // This is commented because it is locking up sometimes.
+  //wifi.releaseTCP(mux_id);
 }
 
 // Get Bad request response - command not understood
