@@ -60,6 +60,14 @@
                                         }
                                 });
                         });
+
+                        $.ajax({
+                                url: '/status',
+                                type: 'GET',
+                                success: function (data) {
+                                        showData(data);
+                                }
+                        });
                 });
 
         function showData(data) {
@@ -125,7 +133,6 @@
 
                 var socket = io('http://italopulga.ddns.net:8099');
                 socket.on('tempData', function (tempData) {
-                    console.log(tempData);
                     showData(JSON.parse(tempData));
                 });
     </script>
