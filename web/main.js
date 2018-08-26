@@ -3,19 +3,39 @@
 // Module setup
 var express = require('express');
 var basicAuth = require('express-basic-auth')
+var https = require('https');
 var http = require('http');
-var io = require('socket.io')(http.Server(app));
 var fs = require('fs');
 var app = express();
+var appRedirect = express();
 
-// Websocket control and data.
-var actuatorData;
+// HTTP Server. Just redirect to HTTPS
+const httpServer = http.createServer(appRedirect)
+appRedirect.get('*', function(req, res) {  
+    res.redirect('https://' + req.headers.host + req.url);
+})
+httpServer.listen(80);
+
+// HTTPS server
+var sslProp = JSON.parse(fs.readFileSync('cert.json','utf8'));
+const credentials = {
+	key: fs.readFileSync(sslProp.key, 'utf8'),
+	cert: fs.readFileSync(sslProp.cert, 'utf8'),
+	ca: fs.readFileSync(sslProp.ca, 'utf8')
+};
+const httpsServer = https.createServer(credentials, app)
+httpsServer.listen(443);
 
 // Browser socket. Send information to the browser
-var browser = io.listen(8098);
+const ioBrowserServer = https.createServer(credentials)
+ioBrowserServer.listen(8098);
+var browser = require('socket.io')(ioBrowserServer);
 
 // Admin socket. Wait for connections from internal agent with current data
-var admin = io.listen(8099);
+var actuatorData;
+const ioAdminServer = https.createServer(credentials)
+ioAdminServer.listen(8099);
+var admin = require('socket.io')(ioAdminServer);
 admin.on('connect', function(socket) {
 	socket.on('tempData', function(data) {
 		actuatorData = data;
@@ -72,6 +92,3 @@ app.put('/pump/auto', function (req, res) {
 	admin.emit('pumpAuto');
 	writeData(res);
 })
-
-// HTTP server
-var server = app.listen(80);

@@ -44,7 +44,7 @@ var actuatorAutoPump = {
 }
 
 // Connect to web agent.
-webAgent = io.connect('http://italopulga.ddns.net:8099');
+webAgent = io.connect('https://italopulga.ddns.net:8099',{secure:true});
 
 // Retrieve data from actuator each 3s
 function getData() {

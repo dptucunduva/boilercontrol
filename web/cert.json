@@ -1,0 +1,5 @@
+{
+  "key": "/etc/letsencrypt/live/yourdomain.com/privkey.pem",
+  "cert": "/etc/letsencrypt/live/yourdomain.com/cert.pem",
+  "ca": "/etc/letsencrypt/live/yourdomain.com/chain.pem"
+}
