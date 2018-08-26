@@ -5,6 +5,7 @@ var express = require('express');
 var basicAuth = require('express-basic-auth')
 var http = require('http');
 var io = require('socket.io')(http.Server(app));
+var fs = require('fs');
 var app = express();
 
 // Websocket control and data.
@@ -23,15 +24,8 @@ admin.on('connect', function(socket) {
 })
 
 // Authentication
-app.use('/',
-	basicAuth(
-		{
-			users: { 'xxx': 'yyy' },
-			challenge: true,
-			realm: 'XXXXXXXXXX'
-		}
-	)
-);
+var authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
+app.use('/',basicAuth(authProp));
 
 // Public static files
 app.use(express.static('public'));
