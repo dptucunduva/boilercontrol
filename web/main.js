@@ -2,9 +2,10 @@
 
 // Module setup
 var express = require('express');
-var app = express();
+var basicAuth = require('express-basic-auth')
 var http = require('http');
 var io = require('socket.io')(http.Server(app));
+var app = express();
 
 // Websocket control and data.
 var actuatorData;
@@ -19,13 +20,20 @@ admin.on('connect', function(socket) {
 		actuatorData = data;
 		browser.emit('tempData', actuatorData);
 	})
-	socket.on('disconnect', function(data) {
-		connected = false;
-	})
 })
 
+// Authentication
+app.use('/',
+	basicAuth(
+		{
+			users: { 'xxx': 'yyy' },
+			challenge: true,
+			realm: 'XXXXXXXXXX'
+		}
+	)
+);
+
 // Public static files
-// FIXME: add favicon
 app.use(express.static('public'));
 
 // Write current data
@@ -72,7 +80,4 @@ app.put('/pump/auto', function (req, res) {
 })
 
 // HTTP server
-var server = app.listen(80, function () {
-   var host = server.address().address
-   var port = server.address().port
-})
+var server = app.listen(80);
