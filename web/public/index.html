@@ -66,6 +66,10 @@
                                 type: 'GET',
                                 success: function (data) {
                                         showData(data);
+			                var socket = io('https://italopulga.ddns.net:8098', {secure:true});
+			                socket.on('tempData', function (tempData) {
+			                    showData(JSON.parse(tempData));
+			                });
                                 }
                         });
                 });
@@ -131,10 +135,6 @@
                         return date.getDate() + "/" + (date.getMonth()+1) + "  " + strTime;
                 }
 
-                var socket = io('https://italopulga.ddns.net:8098', {secure:true});
-                socket.on('tempData', function (tempData) {
-                    showData(JSON.parse(tempData));
-                });
     </script>
 </head>
 <body>
