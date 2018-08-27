@@ -31,19 +31,24 @@ httpsServer.listen(443);
 // Authentication
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
 app.use('/',basicAuth(authProp));
+function checkSocketIoAuth(socket, token) {
+    var auth = authProp.authorization;
+    if (typeof token == 'undefined' ||
+        typeof auth == 'undefined' ||
+        decodeURIComponent(token).indexOf(auth) < 0) {
+            socket.disconnect();
+            console.log('Invalid connection detected. Closing it.');
+            return false;
+    }
+    return true;
+}
 
 // Browser socket. Send information to the browser
 const ioBrowserServer = https.createServer(credentials)
 ioBrowserServer.listen(8098);
 var browser = require('socket.io')(ioBrowserServer);
 browser.on('connect', function(socket) {
-	var ioCookieHeader = socket.handshake.headers.cookie;
-	var auth = authProp.authorization;
-	if (typeof ioCookieHeader == 'undefined' ||
-	    typeof auth == 'undefined' ||
-	    decodeURIComponent(ioCookieHeader).indexOf(auth) <= 0) {
-		socket.destroy();
-	}
+    checkSocketIoAuth(socket, socket.handshake.headers.cookie);
 })
 
 // Admin socket. Wait for connections from internal agent with current data
@@ -52,10 +57,12 @@ const ioAdminServer = https.createServer(credentials)
 ioAdminServer.listen(8099);
 var admin = require('socket.io')(ioAdminServer);
 admin.on('connect', function(socket) {
-	socket.on('tempData', function(data) {
-		actuatorData = data;
-		browser.emit('tempData', actuatorData);
-	})
+    if (checkSocketIoAuth(socket, socket.handshake.headers.authorization)) {
+        socket.on('tempData', function(data) {
+            actuatorData = data;
+            browser.emit('tempData', actuatorData);
+        })
+    }
 })
 
 // Public static files

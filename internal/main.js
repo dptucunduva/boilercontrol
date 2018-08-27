@@ -5,6 +5,7 @@ var express = require('express');
 var app = express();
 var http = require('http');
 var io = require('socket.io-client');
+var fs = require('fs');
 
 // Actuator connections config
 var actHost = 'arduino';
@@ -44,7 +45,19 @@ var actuatorAutoPump = {
 }
 
 // Connect to web agent.
-webAgent = io.connect('https://italopulga.ddns.net:8099',{secure:true});
+const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
+webAgent = io.connect('https://italopulga.ddns.net:8099',
+	{
+		secure:true,
+		transportOptions: {
+			polling: {
+				extraHeaders: {
+					'authorization': authProp.authorization
+				}
+			}
+		}
+	}
+);
 
 // Retrieve data from actuator each 3s
 function getData() {
