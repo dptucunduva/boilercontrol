@@ -9,7 +9,7 @@ User=nobody
 Group=nogroup
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
 Environment=NODE_ENV=production
-WorkingDirectory=/opt/boilercontrol/web
+WorkingDirectory=/opt/boilercontrol/internal
 
 [Install]
 WantedBy=multi-user.target
