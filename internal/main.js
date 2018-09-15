@@ -59,13 +59,26 @@ webAgent = io.connect('https://italopulga.ddns.net:8099',
 	}
 );
 
+// Enrich data from arduino
+function addExtraData(data) {
+	var jsonData = JSON.parse(data);
+	var date = new Date();
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    seconds = seconds < 10 ? '0'+seconds : seconds;
+	jsonData.updateDt = hours + ':' + minutes + ':' + seconds;
+	return JSON.stringify(jsonData);
+}
+
 // Retrieve data from actuator each 3s
 function getData() {
 	var currentData = '';
 	http.request(actuatorGetDataOptions, function(res) {
 		res.on('data', function (chunk) {
     		currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		});
 	}).end();
 }
@@ -80,7 +93,7 @@ webAgent.on('heaterOn', function(timing) {
 	http.request(actuatorEnableHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
 })
@@ -92,7 +105,7 @@ webAgent.on('heaterOff', function (timing) {
 	http.request(actuatorDisableHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
 })
@@ -103,7 +116,7 @@ webAgent.on('heaterAuto', function (dummy) {
 	http.request(actuatorAutoHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
 })
@@ -115,7 +128,7 @@ webAgent.on('pumpOff', function (timing) {
 	http.request(actuatorDisablePump, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
 })
@@ -126,7 +139,7 @@ webAgent.on('pumpAuto', function (dummy) {
 	http.request(actuatorAutoPump, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
-			webAgent.emit('tempData', currentData);
+			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
 })
