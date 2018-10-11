@@ -126,6 +126,16 @@
                         } else {
                                 $("#pump-until").html("&nbsp;");
                         }
+
+                        // Power information
+                        var entries = ""
+                        for (const [key, value] of Object.entries(data.powersensors)) {
+                            entries += "<tr><td>" +
+                                key + "</td><td>" +
+                                value.current + "</td><td>"+
+                                value.power + "</td></tr>";
+                        }
+                        $("#power-table").html(entries);
                 }
 
                 function formatDate(date) {
@@ -138,7 +148,7 @@
 
     </script>
 </head>
-<body>
+    <body>
         <br/>
         <div class="container-fluid">
                 <nav class="navbar navbar-dark bg-primary">
@@ -179,5 +189,23 @@
                   <a href="#" id="pump-auto" class="list-group-item list-group-item-action">Autom&aacute;tica</a>
                 </div>
         </div>
-</body>
+        <br/>
+        <br/>
+        <div class="container-fluid">
+            <nav class="navbar navbar-dark bg-primary">
+              <span class="navbar-brand mb-0 h1">Consumo de energia por circuito<small id="updateDt"></small></span>
+            </nav>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Circuito</th>
+                        <th>Corrente (A)</th>
+                        <th>Potência (W)</th>
+                    </tr>
+                </thead>
+                <tbody id="power-table">
+                </tbody>
+            </table>
+        </div>
+    </body>
 </html>

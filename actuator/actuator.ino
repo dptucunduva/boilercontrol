@@ -1,3 +1,4 @@
+#include <ACS712.h>
 #include <ESP8266.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -25,6 +26,30 @@ void setup() {
   sensors.setResolution(boilerSensor, 10);
   sensors.setResolution(solarPanelSensor, 10);
 
+  // Setup current sensor
+  //Serial.println(acSensor15.calibrate());
+  //Serial.println(acSensor14.calibrate());
+  //Serial.println(acSensor13.calibrate());
+  //Serial.println(acSensor12.calibrate());
+  //Serial.println(acSensor11.calibrate());
+  //Serial.println(acSensor10.calibrate());
+  //Serial.println(acSensor09.calibrate());
+  //Serial.println(acSensor08.calibrate());
+  //Serial.println(acSensor07.calibrate());
+  //Serial.println(acSensor06.calibrate());
+  //Serial.println(acSensor05.calibrate());
+  acSensor15.setZeroPoint(509);
+  acSensor14.setZeroPoint(509);
+  acSensor13.setZeroPoint(508);
+  acSensor12.setZeroPoint(101);
+  acSensor11.setZeroPoint(102);
+  acSensor10.setZeroPoint(97);
+  acSensor09.setZeroPoint(102);
+  acSensor08.setZeroPoint(100);
+  acSensor07.setZeroPoint(99);
+  acSensor06.setZeroPoint(102);
+  acSensor05.setZeroPoint(99);
+  
   // Startup WiFi
   setupWiFi();
 }
@@ -41,6 +66,9 @@ void loop() {
 
   // Handle pump on/off
   checkPumpStatus();
+
+  // Read current
+  readCurrent();
 }
 
 /**
@@ -53,10 +81,10 @@ void updateTemp() {
   float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
 
   // Workaround for eventual innacurate readings
-  if (readBoilerTemp > 5 && readBoilerTemp < 70) {
+  if (readBoilerTemp > 5 && readBoilerTemp < 90) {
     boilerTemp = readBoilerTemp;
   }
-  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 70) {
+  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 90) {
     solarPanelTemp = readSolarPanelTemp;
   }
 }
@@ -316,12 +344,100 @@ String getStatus() {
     responseBody += ", \"pumpOverrideUntil\": ";
     responseBody += (pumpOverrideUntil - millis());
   } 
+
+  // Energy consumption response part
+  responseBody += ", \"powersensors\": { ";
+  responseBody += "\"01 - Luz muros e quintal\": { \"current\": ";
+  responseBody += acCurrent15;
+  responseBody += ", \"power\": ";
+  responseBody += acPower15;
+  responseBody += "},";
+  responseBody += "\"02 - Luz salas, quartos e escritório\": { \"current\": ";
+  responseBody += acCurrent14;
+  responseBody += ", \"power\": ";
+  responseBody += acPower14;
+  responseBody += "},";
+  responseBody += "\"03 - Luz cozinha, AS e churrasqueira\": { \"current\": ";
+  responseBody += acCurrent13;
+  responseBody += ", \"power\": ";
+  responseBody += acPower13;
+  responseBody += "},";
+  responseBody += "\"04 - Tomadas sala de estar e escritório\": { \"current\": ";
+  responseBody += acCurrent12;
+  responseBody += ", \"power\": ";
+  responseBody += acPower12;
+  responseBody += "},";
+  responseBody += "\"05 - Tomadas sala de jantar e TV\": { \"current\": ";
+  responseBody += acCurrent11;
+  responseBody += ", \"power\": ";
+  responseBody += acPower11;
+  responseBody += "},";
+  responseBody += "\"06 - Tomadas suíte\": { \"current\": ";
+  responseBody += acCurrent10;
+  responseBody += ", \"power\": ";
+  responseBody += acPower10;
+  responseBody += "},";
+  responseBody += "\"07 - Tomadas banheiro suíte, closet suíte master e corredor\": { \"current\": ";
+  responseBody += acCurrent09;
+  responseBody += ", \"power\": ";
+  responseBody += acPower09;
+  responseBody += "},";
+  responseBody += "\"08 - Tomadas banheiro suíte master\": { \"current\": ";
+  responseBody += acCurrent08;
+  responseBody += ", \"power\": ";
+  responseBody += acPower08;
+  responseBody += "},";
+  responseBody += "\"09 - Tomadas suíte master\": { \"current\": ";
+  responseBody += acCurrent07;
+  responseBody += ", \"power\": ";
+  responseBody += acPower07;
+  responseBody += "},";
+  responseBody += "\"10 - Tomadas gerais cozinha\": { \"current\": ";
+  responseBody += acCurrent06;
+  responseBody += ", \"power\": ";
+  responseBody += acPower06;
+  responseBody += "},";
+  responseBody += "\"11 - Tomada Microondas\": { \"current\": ";
+  responseBody += acCurrent05;
+  responseBody += ", \"power\": ";
+  responseBody += acPower05;
+  responseBody += "} ";
+  responseBody += "}";
+  
   responseBody += "}";
   String response = responseHeader;
   response += responseBody.length();
   response += "\r\n\r\n";
   response += responseBody;
   return response;
+}
+
+/**
+ * Current monitoring functions
+ */
+void readCurrent() {
+  acCurrent15 = acSensor15.getCurrentAC(60);
+  acPower15 = acCurrent15 * VOLTAGE_15;
+  acCurrent14 = acSensor14.getCurrentAC(60);
+  acPower14 = acCurrent14 * VOLTAGE_14;
+  acCurrent13 = acSensor13.getCurrentAC(60);
+  acPower13 = acCurrent13 * VOLTAGE_13;
+  acCurrent12 = acSensor12.getCurrentAC(60);
+  acPower12 = acCurrent12 * VOLTAGE_12;
+  acCurrent11 = acSensor11.getCurrentAC(60);
+  acPower11 = acCurrent11 * VOLTAGE_11;
+  acCurrent10 = acSensor10.getCurrentAC(60);
+  acPower10 = acCurrent10 * VOLTAGE_10;
+  acCurrent09 = acSensor09.getCurrentAC(60);
+  acPower09 = acCurrent09 * VOLTAGE_09;
+  acCurrent08 = acSensor08.getCurrentAC(60);
+  acPower08 = acCurrent08 * VOLTAGE_08;
+  acCurrent07 = acSensor07.getCurrentAC(60);
+  acPower07 = acCurrent07 * VOLTAGE_07;
+  acCurrent06 = acSensor06.getCurrentAC(60);
+  acPower06 = acCurrent06 * VOLTAGE_06;
+  acCurrent05 = acSensor05.getCurrentAC(60);
+  acPower05 = acCurrent05 * VOLTAGE_05;
 }
 
 /**
