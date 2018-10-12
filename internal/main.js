@@ -81,8 +81,9 @@ function getData() {
 			webAgent.emit('tempData', addExtraData(currentData));
 
 			// store data in a file so that an agent can send it to a DB
-			console.log(currentData);
 			var readingDate = new Date();
+
+			// Power sensors
 			for (const [key, value] of Object.entries(JSON.parse(currentData).powersensors)) {
 				var entry = {};
 				entry.name = key.substring(5);
@@ -91,10 +92,16 @@ function getData() {
 				entry.timestamp = readingDate.getTime();
 				entry.current = value.current;
 				entry.power = value.power;
-				fs.writeFile('data/'+entry.circuitId+'-'+entry.timestamp+'-'+
+				fs.writeFileSync('data/power/'+entry.circuitId+'-'+entry.timestamp+'-'+
 					entry.name.replace(/[^\w\s]/gi, '').replace(/\s+/g,'-').toLowerCase()+'.json', 
-					JSON.stringify(entry), 'utf8', function dummy(){});
+					JSON.stringify(entry), 'utf8');
 			}
+
+			// Temperature data sensors
+			var temperatureData = JSON.parse(currentData);
+			delete temperatureData["powersensors"];
+			fs.writeFileSync('data/temperature/'+readingDate.getTime()+'.json', 
+				JSON.stringify(temperatureData), 'utf8');
 		});
 	}).end();
 }
