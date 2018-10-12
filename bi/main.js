@@ -30,9 +30,6 @@ function loadData() {
 	  		var temperatureData = JSON.parse(fs.readFileSync(temperatureDatadir+'/'+file,'utf8'));
 	  		addToDB('temperaturedb', 'readings', temperatureData, temperatureDatadir+'/'+file);
 		});
-
-		console.log('Loaded.');
-		mdbClient.close();
 	});
 }
 loadData();
@@ -45,7 +42,7 @@ function addToDB(dbName, collectionName, data, fileToDel) {
 		assert.equal(err, null);
 		assert.equal(1, result.result.n);
 		assert.equal(1, result.ops.length);
-		console.log('Inserted: ' + JSON.stringfy(data));
+		console.log('Inserted: ' + JSON.stringify(data));
 	  	fs.unlinkSync(fileToDel);
 	});
 }
