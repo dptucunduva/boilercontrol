@@ -15,6 +15,10 @@ const mdbClient = new MongoClient(mdbUrl, { useNewUrlParser: true });
 // Handle files
 function loadData() {
 
+	if (mdbClient.serverConfig.isConnected()) {
+		mdbClient.close();
+	}
+	
 	mdbClient.connect(function(err) {
 		assert.equal(null, err);
 		console.log('Starting...');
