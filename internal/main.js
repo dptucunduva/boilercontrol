@@ -79,11 +79,27 @@ function getData() {
 		res.on('data', function (chunk) {
     		currentData += chunk;
 			webAgent.emit('tempData', addExtraData(currentData));
+
+			// store data in a file so that an agent can send it to a DB
+			console.log(currentData);
+			var readingDate = new Date();
+			for (const [key, value] of Object.entries(JSON.parse(currentData).powersensors)) {
+				var entry = {};
+				entry.name = key.substring(5);
+				entry.circuitId = key.substring(0,2);
+				entry.date = readingDate;
+				entry.timestamp = readingDate.getTime();
+				entry.current = value.current;
+				entry.power = value.power;
+				fs.writeFile('data/'+entry.circuitId+'-'+entry.timestamp+'-'+
+					entry.name.replace(/[^\w\s]/gi, '').replace(/\s+/g,'-').toLowerCase()+'.json', 
+					JSON.stringify(entry), 'utf8', function dummy(){});
+			}
 		});
 	}).end();
 }
 getData();
-setInterval(getData, 15000);
+setInterval(getData, 10000);
 
 // Command handling
 // Heater on
