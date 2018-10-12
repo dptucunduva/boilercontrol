@@ -100,6 +100,8 @@ function getData() {
 			// Temperature data sensors
 			var temperatureData = JSON.parse(currentData);
 			delete temperatureData["powersensors"];
+			temperatureData.date = readingDate;
+			temperatureData.timestamp = readingDate.getTime();
 			fs.writeFileSync('data/temperature/'+readingDate.getTime()+'.json', 
 				JSON.stringify(temperatureData), 'utf8');
 		});
