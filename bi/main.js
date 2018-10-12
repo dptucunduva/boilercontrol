@@ -17,7 +17,6 @@ function loadData() {
 
 	mdbClient.connect(function(err) {
 		assert.equal(null, err);
-		console.log('Starting...');
 
 		// For each file in power folder
 		fs.readdirSync(powerDatadir).forEach(file => {
@@ -42,7 +41,6 @@ function addToDB(dbName, collectionName, data, fileToDel) {
 		assert.equal(err, null);
 		assert.equal(1, result.result.n);
 		assert.equal(1, result.ops.length);
-		console.log('Inserted: ' + JSON.stringify(data));
 	  	fs.unlinkSync(fileToDel);
 	});
 }
