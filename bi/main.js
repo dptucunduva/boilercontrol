@@ -10,13 +10,14 @@ const temperatureDatadir = '../internal/data/temperature';
 
 // Mongo
 const mdbUrl = 'mongodb://italopulga.ddns.net:57017';
-const mdbClient = new MongoClient(mdbUrl);
+const mdbClient = new MongoClient(mdbUrl, { useNewUrlParser: true });
 
 // Handle files
 function loadData() {
 
 	mdbClient.connect(function(err) {
 		assert.equal(null, err);
+		console.log('Starting...');
 
 		// For each file in power folder
 		fs.readdirSync(powerDatadir).forEach(file => {
@@ -30,6 +31,7 @@ function loadData() {
 	  		addToDB('temperaturedb', 'readings', temperatureData, temperatureDatadir+'/'+file);
 		});
 
+		console.log('Loaded.');
 		mdbClient.close();
 	});
 }
@@ -43,6 +45,7 @@ function addToDB(dbName, collectionName, data, fileToDel) {
 		assert.equal(err, null);
 		assert.equal(1, result.result.n);
 		assert.equal(1, result.ops.length);
+		console.log('Inserted: ' + JSON.stringfy(data));
 	  	fs.unlinkSync(fileToDel);
 	});
 }
