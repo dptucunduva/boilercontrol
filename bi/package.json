@@ -1,0 +1,23 @@
+{
+  "name": "boilercontrol-bi",
+  "version": "0.9.0",
+  "description": "Business Inteligence module - collects and process data read and stored by internal agent",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dptucunduva/boilercontrol"
+  },
+  "keywords": [
+    "node",
+    "iot"
+  ],
+  "author": "Daniel Parra",
+  "contributors": [],
+  "license": "MIT",
+  "dependencies": {
+    "mongodb": "^3.1.8"
+  }
+}
