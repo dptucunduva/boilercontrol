@@ -1,0 +1,21 @@
+{
+  "name": "boilercontrol-charts",
+  "version": "0.9.0",
+  "description": "Charts module - Analytical view of data collected by BI module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dptucunduva/boilercontrol"
+  },
+  "keywords": [
+    "node",
+    "iot",
+    "analytics"
+  ],
+  "author": "Daniel Parra",
+  "contributors": [],
+  "license": "MIT"
+}
