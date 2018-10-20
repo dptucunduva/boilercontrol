@@ -17,5 +17,10 @@
   ],
   "author": "Daniel Parra",
   "contributors": [],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^2.7.3",
+    "chartjs-node": "^1.7.1",
+    "mongodb": "^3.1.8"
+  }
 }
