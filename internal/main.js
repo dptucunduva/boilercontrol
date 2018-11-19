@@ -122,6 +122,8 @@ webAgent.on('heaterOn', function(timing) {
 	http.request(actuatorEnableHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
@@ -134,6 +136,8 @@ webAgent.on('heaterOff', function (timing) {
 	http.request(actuatorDisableHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
@@ -145,6 +149,8 @@ webAgent.on('heaterAuto', function (dummy) {
 	http.request(actuatorAutoHeater, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
@@ -157,6 +163,8 @@ webAgent.on('pumpOff', function (timing) {
 	http.request(actuatorDisablePump, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
@@ -168,6 +176,8 @@ webAgent.on('pumpAuto', function (dummy) {
 	http.request(actuatorAutoPump, function(res) {
 		res.on('data', function (chunk) {
 			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 		})
 	}).end();
