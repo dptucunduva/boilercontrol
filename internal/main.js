@@ -44,6 +44,32 @@ var actuatorAutoPump = {
 	method: 'PUT'
 }
 
+// Circuit name mapping
+const nameMap = {
+	"01":"Luz muros e quintal",
+	"02":"Luz salas, quartos e escritório",
+	"03":"Luz cozinha, AS e churrasqueira",
+	"04":"Tomadas sala de estar e escritório",
+	"05":"Tomadas sala de jantar e TV",
+	"06":"Tomadas suíte",
+	"07":"Tomadas banheiro suíte, closet suíte master e corredor",
+	"08":"Tomadas banheiro suíte master",
+	"09":"Tomadas suíte master",
+	"10":"Tomadas gerais cozinha",
+	"11":"Tomada Microondas",
+	"12":"Forno",
+	"13":"Lava roupas",
+	"14":"Secadora e ferro de passar",
+	"15":"Tomadas gerais área de serviço",
+	"16":"Tomadas gerais churrasqueira",
+	"17":"Controle do boiler",
+	"18":"Ar condicionado suíte",
+	"19":"Ar condicionado sala de TV",
+	"20":"Ar condicionado escritório",
+	"21":"Hidromassagem suíte master",
+	"22":"Ar condicionado suíte master"
+};
+
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
 webAgent = io.connect('https://italopulga.ddns.net:8099',
@@ -69,6 +95,14 @@ function addExtraData(data) {
     minutes = minutes < 10 ? '0'+minutes : minutes;
     seconds = seconds < 10 ? '0'+seconds : seconds;
 	jsonData.updateDt = hours + ':' + minutes + ':' + seconds;
+
+	// Add names in each circuit
+	var ps = {};
+	for (const [key, value] of Object.entries(jsonData.powersensors)) {
+		ps[key + " - " + nameMap[key]] = value;
+	}
+	jsonData.powersensors = ps;
+
 	return JSON.stringify(jsonData);
 }
 
@@ -80,7 +114,8 @@ function getData() {
 			currentData += chunk;
 		});
 		res.on('end', function() {
-			webAgent.emit('tempData', addExtraData(currentData));
+			currentData = addExtraData(currentData);
+			webAgent.emit('tempData', currentData);
 
 			// store data in a file so that an agent can send it to a DB
 			var readingDate = new Date();
