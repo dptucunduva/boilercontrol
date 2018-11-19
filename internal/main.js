@@ -77,7 +77,9 @@ function getData() {
 	var currentData = '';
 	http.request(actuatorGetDataOptions, function(res) {
 		res.on('data', function (chunk) {
-    		currentData += chunk;
+			currentData += chunk;
+		});
+		res.on('end', function() {
 			webAgent.emit('tempData', addExtraData(currentData));
 
 			// store data in a file so that an agent can send it to a DB
@@ -89,6 +91,7 @@ function getData() {
 				entry.name = key.substring(5);
 				entry.circuitId = key.substring(0,2);
 				entry.date = readingDate;
+				entry.localizedDate = readingDate.toLocaleString('pt-BR')
 				entry.timestamp = readingDate.getTime();
 				entry.current = value.current;
 				entry.power = value.power;
@@ -101,6 +104,7 @@ function getData() {
 			var temperatureData = JSON.parse(currentData);
 			delete temperatureData["powersensors"];
 			temperatureData.date = readingDate;
+			temperatureData.localizedDate = readingDate.toLocaleString('pt-BR')
 			temperatureData.timestamp = readingDate.getTime();
 			fs.writeFileSync('data/temperature/'+readingDate.getTime()+'.json', 
 				JSON.stringify(temperatureData), 'utf8');
