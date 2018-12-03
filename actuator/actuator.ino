@@ -28,40 +28,7 @@ void setup() {
   sensors.setResolution(solarPanelSensor, 10);
 
   // Setup current sensors
-  /*
-  zero15 = acSensor15.calibrate();
-  zero14 = acSensor14.calibrate();
-  zero13 = acSensor13.calibrate();
-  zero12 = acSensor12.calibrate();
-  zero11 = acSensor11.calibrate();
-  zero10 = acSensor10.calibrate();
-  zero09 = acSensor09.calibrate();
-  zero08 = acSensor08.calibrate();
-  zero07 = acSensor07.calibrate();
-  zero06 = acSensor06.calibrate();
-  zero05 = acSensor05.calibrate();
-  zero04 = acSensor04.calibrate();
-  zero03 = acSensor03.calibrate();
-  zero02 = acSensor02.calibrate();
-  zero01 = acSensor01.calibrate();
-  zero00 = acSensor00.calibrate();
-  */
-  acSensor15.setZeroPoint(512);
-  acSensor14.setZeroPoint(509);
-  acSensor13.setZeroPoint(500);
-  acSensor12.setZeroPoint(96);
-  acSensor11.setZeroPoint(133);
-  acSensor10.setZeroPoint(116);
-  acSensor09.setZeroPoint(101);
-  acSensor08.setZeroPoint(103);
-  acSensor07.setZeroPoint(110);
-  acSensor06.setZeroPoint(71);
-  acSensor05.setZeroPoint(98);
-  acSensor04.setZeroPoint(518);
-  acSensor03.setZeroPoint(508);
-  acSensor02.setZeroPoint(503);
-  acSensor01.setZeroPoint(500);
-  acSensor00.setZeroPoint(506);
+  calibrateSensors();  
   
   // Startup WiFi
   setupWiFi();
@@ -311,6 +278,11 @@ void handleHttpCommand(uint8_t mux_id, String command) {
       disablePump();
       setPumpOverride(true, pumpOverrideDuration);
       response = getStatus();
+    } else if (command.startsWith("PUT /zero/")) {
+      int sensorNdx = atoi(command.substring(10, 12).c_str());
+      int zero = atoi(command.substring(13,16).c_str());
+      setZeroPoint(sensorNdx, zero);
+      response = getStatus();
     } else {
       response = getBadRequestResponse();
     }
@@ -363,155 +335,28 @@ String getStatus() {
 
   // Energy consumption response part
   responseBody += ", \"powersensors\": { ";
-  responseBody += "\"01\": { \"current\": ";
-  responseBody += acCurrent15;
-  responseBody += ", \"power\": ";
-  responseBody += acPower15;
-  responseBody += "},";
-  responseBody += "\"02\": { \"current\": ";
-  responseBody += acCurrent14;
-  responseBody += ", \"power\": ";
-  responseBody += acPower14;
-  responseBody += "},";
-  responseBody += "\"03\": { \"current\": ";
-  responseBody += acCurrent13;
-  responseBody += ", \"power\": ";
-  responseBody += acPower13;
-  responseBody += "},";
-  responseBody += "\"04\": { \"current\": ";
-  responseBody += acCurrent12;
-  responseBody += ", \"power\": ";
-  responseBody += acPower12;
-  responseBody += "},";
-  responseBody += "\"05\": { \"current\": ";
-  responseBody += acCurrent11;
-  responseBody += ", \"power\": ";
-  responseBody += acPower11;
-  responseBody += "},";
-  responseBody += "\"06\": { \"current\": ";
-  responseBody += acCurrent10;
-  responseBody += ", \"power\": ";
-  responseBody += acPower10;
-  responseBody += "},";
-  responseBody += "\"07\": { \"current\": ";
-  responseBody += acCurrent09;
-  responseBody += ", \"power\": ";
-  responseBody += acPower09;
-  responseBody += "},";
-  responseBody += "\"08\": { \"current\": ";
-  responseBody += acCurrent08;
-  responseBody += ", \"power\": ";
-  responseBody += acPower08;
-  responseBody += "},";
-  responseBody += "\"09\": { \"current\": ";
-  responseBody += acCurrent07;
-  responseBody += ", \"power\": ";
-  responseBody += acPower07;
-  responseBody += "},";
-  responseBody += "\"10\": { \"current\": ";
-  responseBody += acCurrent06;
-  responseBody += ", \"power\": ";
-  responseBody += acPower06;
-  responseBody += "},";
-  responseBody += "\"11\": { \"current\": ";
-  responseBody += acCurrent05;
-  responseBody += ", \"power\": ";
-  responseBody += acPower05;
-  responseBody += "},";
-  responseBody += "\"12\": { \"current\": ";
-  responseBody += acCurrent04;
-  responseBody += ", \"power\": ";
-  responseBody += acPower04;
-  responseBody += "},";
-  responseBody += "\"13\": { \"current\": ";
-  responseBody += acCurrent03;
-  responseBody += ", \"power\": ";
-  responseBody += acPower03;
-  responseBody += "},";
-  responseBody += "\"14\": { \"current\": ";
-  responseBody += acCurrent02;
-  responseBody += ", \"power\": ";
-  responseBody += acPower02;
-  responseBody += "},";
-  responseBody += "\"15\": { \"current\": ";
-  responseBody += acCurrent01;
-  responseBody += ", \"power\": ";
-  responseBody += acPower01;
-  responseBody += "},";
-  responseBody += "\"16\": { \"current\": ";
-  responseBody += acCurrent00;
-  responseBody += ", \"power\": ";
-  responseBody += acPower00;
-  responseBody += "},";
-  // From slave arduino
-  responseBody += "\"17\": { \"current\": ";
-  responseBody += acCurrent16;
-  responseBody += ", \"power\": ";
-  responseBody += acPower16;
-  responseBody += "},";
-  responseBody += "\"18\": { \"current\": ";
-  responseBody += acCurrent17;
-  responseBody += ", \"power\": ";
-  responseBody += acPower17;
-  responseBody += "},";
-  responseBody += "\"19\": { \"current\": ";
-  responseBody += acCurrent18;
-  responseBody += ", \"power\": ";
-  responseBody += acPower18;
-  responseBody += "},";
-  responseBody += "\"20\": { \"current\": ";
-  responseBody += acCurrent19;
-  responseBody += ", \"power\": ";
-  responseBody += acPower19;
-  responseBody += "},";
-  responseBody += "\"21\": { \"current\": ";
-  responseBody += acCurrent20;
-  responseBody += ", \"power\": ";
-  responseBody += acPower20;
-  responseBody += "},";
-  responseBody += "\"22\": { \"current\": ";
-  responseBody += acCurrent21;
-  responseBody += ", \"power\": ";
-  responseBody += acPower21;
-  responseBody += "} ";
+  for (int i=0; i < 22; i++) {
+    responseBody += "\"";
+    responseBody += acSensorName[i];
+    responseBody += "\": { \"current\": ";
+    responseBody += acCurrent[i];
+    responseBody += ", \"power\": ";
+    responseBody += acPower[i];
+    responseBody += "}";
+    if (i < 21) {
+      responseBody += ",";
+    }
+  }
   responseBody += "}";
 
-  // calibration
-  /*
-  responseBody += ",{\"calibration\":\"";
-  responseBody += zero15;
-  responseBody += ",";
-  responseBody += zero14;
-  responseBody += ",";
-  responseBody += zero13;
-  responseBody += ",";
-  responseBody += zero12;
-  responseBody += ",";
-  responseBody += zero11;
-  responseBody += ",";
-  responseBody += zero10;
-  responseBody += ",";
-  responseBody += zero09;
-  responseBody += ",";
-  responseBody += zero08;
-  responseBody += ",";
-  responseBody += zero07;
-  responseBody += ",";
-  responseBody += zero06;
-  responseBody += ",";
-  responseBody += zero05;
-  responseBody += ",";
-  responseBody += zero04;
-  responseBody += ",";
-  responseBody += zero03;
-  responseBody += ",";
-  responseBody += zero02;
-  responseBody += ",";
-  responseBody += zero01;
-  responseBody += ",";
-  responseBody += zero00;
-  responseBody += "\"}";
-  */
+  // Calibration info
+  responseBody += ",\"calibration\":\"";
+  for (int i=0; i < 16; i++) {
+    responseBody += acZero[i];
+    responseBody += " ";
+  }
+  responseBody += "\"";
+
   responseBody += "}";
   String response = responseHeader;
   response += responseBody.length();
@@ -524,40 +369,13 @@ String getStatus() {
  * Current monitoring functions
  */
 void readCurrent() {
-  acCurrent15 = acSensor15.getCurrentAC(60);
-  acPower15 = acCurrent15 * VOLTAGE_15;
-  acCurrent14 = acSensor14.getCurrentAC(60);
-  acPower14 = acCurrent14 * VOLTAGE_14;
-  acCurrent13 = acSensor13.getCurrentAC(60);
-  acPower13 = acCurrent13 * VOLTAGE_13;
-  acCurrent12 = acSensor12.getCurrentAC(60);
-  acPower12 = acCurrent12 * VOLTAGE_12;
-  acCurrent11 = acSensor11.getCurrentAC(60);
-  acPower11 = acCurrent11 * VOLTAGE_11;
-  acCurrent10 = acSensor10.getCurrentAC(60);
-  acPower10 = acCurrent10 * VOLTAGE_10;
-  acCurrent09 = acSensor09.getCurrentAC(60);
-  acPower09 = acCurrent09 * VOLTAGE_09;
-  acCurrent08 = acSensor08.getCurrentAC(60);
-  acPower08 = acCurrent08 * VOLTAGE_08;
-  acCurrent07 = acSensor07.getCurrentAC(60);
-  acPower07 = acCurrent07 * VOLTAGE_07;
-  acCurrent06 = acSensor06.getCurrentAC(60);
-  acPower06 = acCurrent06 * VOLTAGE_06;
-  acCurrent05 = acSensor05.getCurrentAC(60);
-  acPower05 = acCurrent05 * VOLTAGE_05;
-  acCurrent04 = acSensor04.getCurrentAC(60);
-  acPower04 = acCurrent04 * VOLTAGE_04;
-  acCurrent03 = acSensor03.getCurrentAC(60);
-  acPower03 = acCurrent03 * VOLTAGE_03;
-  acCurrent02 = acSensor02.getCurrentAC(60);
-  acPower02 = acCurrent02 * VOLTAGE_02;
-  acCurrent01 = acSensor01.getCurrentAC(60);
-  acPower01 = acCurrent01 * VOLTAGE_01;
-  acCurrent00 = acSensor00.getCurrentAC(60);
-  acPower00 = acCurrent00 * VOLTAGE_00;
+  for (int i=0; i < 16; i++) {
+    acCurrent[i] = acSensor[i].getCurrentAC(60);
+    acPower[i] = acCurrent[i] * acVoltage[i];
+  }
 }
 
+// Read data from slave Arduino
 void readDataFromSlave() {
   Serial3.write('Q');
   delay(100);
@@ -570,20 +388,42 @@ void readDataFromSlave() {
 
     // Parse the data if the size is correct. Each 8 bytes are a float.
     if (data.length() == 98) {
-      acCurrent16 = data.substring(0,8).toFloat();
-      acPower16 = data.substring(8,16).toFloat();
-      acCurrent17 = data.substring(16,24).toFloat();
-      acPower17 = data.substring(24,32).toFloat();
-      acCurrent18 = data.substring(32,40).toFloat();
-      acPower18 = data.substring(40,48).toFloat();
-      acCurrent19 = data.substring(48,56).toFloat();
-      acPower19 = data.substring(56,64).toFloat();
-      acCurrent20 = data.substring(64,72).toFloat();
-      acPower20 = data.substring(72,80).toFloat();
-      acCurrent21 = data.substring(80,88).toFloat();
-      acPower21 = data.substring(88,96).toFloat();
+      int i=0;
+      int j=0;
+      for (; i < 6; i++, j+=2) {
+        acCurrent[i+16] = data.substring(j*8,(j+1)*8).toFloat();
+        acPower[i+16] = data.substring((j+1)*8,(j+2)*8).toFloat();
+      }
     } 
   } 
+}
+
+// Get data from EPROM.
+void calibrateSensors() {
+  float hasData = 0;
+  EEPROM.get(100, hasData);
+  if (hasData > 0) {
+    for (int i=0; i < 16; i++) {
+       EEPROM.get(acZeroEEPROMAddr[i], acZero[i]);
+    }
+  } else {
+    EEPROM.put(100, (float)1);
+    for (int i=0; i < 16; i++) {
+       EEPROM.put(acZeroEEPROMAddr[i], acZero[i]);
+    }
+  }
+
+  // Set zero
+  for (int i=0; i < 16; i++) {
+    acSensor[i].setZeroPoint(acZero[i]);
+  }
+}
+
+// Set ac sensor zero point 
+void setZeroPoint(int sensorNdx, int zero) {
+  acSensor[sensorNdx].setZeroPoint(zero);
+  acZero[sensorNdx] = zero;
+  EEPROM.put(acZeroEEPROMAddr[sensorNdx], zero);
 }
 
 /**
