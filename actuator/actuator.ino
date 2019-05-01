@@ -52,6 +52,9 @@ void loop() {
 
   // Get Data from slave Arduino
   readDataFromSlave();
+
+  // Check if wifi is connected
+  checkWiFi();
 }
 
 /**
@@ -437,7 +440,14 @@ void setupWiFi() {
   wifi.enableMUX();
   wifi.startTCPServer(WIFI_SERVER_PORT);
   wifi.setTCPServerTimeout(WIFI_SERVER_TIMEOUT);
-  ESP8266_SERIAL.println("AT+CIPSTA=\"192.168.1.211\"");
+  ESP8266_SERIAL.println("AT+CIPSTA=\""+LOCAL_IP+"\"");
+}
+
+// Check if wifi is connected and, if not, try to connect.
+void checkWiFi() {
+  if (!wifi.getLocalIP().indexOf(LOCAL_IP) > 0) {
+    setupWiFi();
+  }
 }
 
 // Check EEPROM and reset if needed.

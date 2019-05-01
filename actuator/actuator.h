@@ -16,8 +16,9 @@
 #define WIFI_SERVER_PORT 80
 #define WIFI_SERVER_TIMEOUT 5
 const String WIFI_SSID = "asdfasd-int";
-const String WIFI_PASSWORD = "*********";
+const String WIFI_PASSWORD = "*******";
 ESP8266 wifi(Serial1);
+const String LOCAL_IP = "192.168.1.211";
 
 // DS18B20 temperature sensor setup
 OneWire oneWire(TEMP_SENSOR_PIN);
