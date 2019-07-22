@@ -47,7 +47,6 @@ function addExtraData(data) {
 //  Everytime the actuator sends data, we get it and post it to the website
 parser.on('data', function(data) {
 	try {
-		console.log(data);
 		webAgent.emit('tempData', addExtraData(data));
 	} catch (e) {
 		console.log("Error parsing data: " + data);
