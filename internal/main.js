@@ -10,8 +10,8 @@ const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline')
 
 // Actuator connections config
-//var actTtyPort = '/dev/ttyACM0';
-var actTtyPort = 'COM3';
+var actTtyPort = '/dev/ttyACM0';
+//var actTtyPort = 'COM3';
 var actTtyBaud = 115200;
 const port = new SerialPort(actTtyPort, {baudRate:actTtyBaud});
 const parser = port.pipe(new Readline({ delimiter: '\r\n\r\n' }));
