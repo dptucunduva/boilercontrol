@@ -6,46 +6,18 @@ var app = express();
 var http = require('http');
 var io = require('socket.io-client');
 var fs = require('fs');
+const SerialPort = require('serialport');
+const Readline = require('@serialport/parser-readline')
 
 // Actuator connections config
-var actHost = 'arduino';
-var actPort = 80;
-var actuatorGetDataOptions = {
-	host: actHost,
-	port: actPort,
-	path: '/',
-	method: 'GET'
-}
-var actuatorEnableHeater = {
-	host: actHost,
-	port: actPort,
-	method: 'PUT'
-}
-var actuatorDisableHeater = {
-	host: actHost,
-	port: actPort,
-	method: 'PUT'
-}
-var actuatorAutoHeater = {
-	host: actHost,
-	port: actPort,
-	path: '/heater/auto',
-	method: 'PUT'
-}
-var actuatorDisablePump = {
-	host: actHost,
-	port: actPort,
-	method: 'PUT'
-}
-var actuatorAutoPump = {
-	host: actHost,
-	port: actPort,
-	path: '/pump/auto/',
-	method: 'PUT'
-}
+//var actTtyPort = '/dev/ttyACM0';
+var actTtyPort = 'COM3';
+var actTtyBaud = 115200;
+const port = new SerialPort(actTtyPort, {baudRate:actTtyBaud});
+const parser = port.pipe(new Readline({ delimiter: '\r\n\r\n' }));
 
 // Connect to web agent.
-const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
+const authProp = JSON.parse(fs.readFileSync('./internal/auth.json','utf8'));
 webAgent = io.connect('https://italopulga.ddns.net:8099',
 	{
 		secure:true,
@@ -72,74 +44,50 @@ function addExtraData(data) {
 	return JSON.stringify(jsonData);
 }
 
-// Retrieve data from actuator each 3s
+//  Everytime the actuator sends data, we get it and post it to the website
+parser.on('data', function(data) {
+	try {
+		console.log(data);
+		webAgent.emit('tempData', addExtraData(data));
+	} catch (e) {
+		console.log("Error parsing data: " + data);
+	}
+});
+
+// Update data each 5s
 function getData() {
-	var currentData = '';
-	http.request(actuatorGetDataOptions, function(res) {
-		res.on('data', function (chunk) {
-    		currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		});
-	}).end();
+	port.write("GET /");
 }
 getData();
-setInterval(getData, 15000);
+setInterval(getData, 5000);
 
 // Command handling
 // Heater on
 webAgent.on('heaterOn', function(timing) {
-	var currentData = '';
-	actuatorEnableHeater.path = '/heater/on/'+timing;
-	http.request(actuatorEnableHeater, function(res) {
-		res.on('data', function (chunk) {
-			currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		})
-	}).end();
-})
+	port.write("PUT /heater/on/" + timing);
+});
 
 // Heater off
 webAgent.on('heaterOff', function (timing) {
-	var currentData = '';
-	actuatorDisableHeater.path = '/heater/off/'+timing;
-	http.request(actuatorDisableHeater, function(res) {
-		res.on('data', function (chunk) {
-			currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		})
-	}).end();
-})
+	port.write("PUT /heater/off/" + timing);
+});
 
 // Heater auto
-webAgent.on('heaterAuto', function (dummy) {
-	var currentData = '';
-	http.request(actuatorAutoHeater, function(res) {
-		res.on('data', function (chunk) {
-			currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		})
-	}).end();
-})
+webAgent.on('heaterAuto', function () {
+	port.write("PUT /heater/auto");
+});
 
 // Pump off
 webAgent.on('pumpOff', function (timing) {
-	var currentData = '';
-	actuatorDisablePump.path = '/pump/off/'+timing;
-	http.request(actuatorDisablePump, function(res) {
-		res.on('data', function (chunk) {
-			currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		})
-	}).end();
-})
+	port.write("PUT /pump/off/" + timing);
+});
+
+// Pump on
+webAgent.on('pumpOn', function (timing) {
+	port.write("PUT /pump/on/" + timing);
+});
 
 // Pump auto
-webAgent.on('pumpAuto', function (dummy) {
-	var currentData = '';
-	http.request(actuatorAutoPump, function(res) {
-		res.on('data', function (chunk) {
-			currentData += chunk;
-			webAgent.emit('tempData', addExtraData(currentData));
-		})
-	}).end();
-})
+webAgent.on('pumpAuto', function () {
+	port.write("PUT /pump/auto");
+});

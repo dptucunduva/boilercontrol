@@ -1,4 +1,3 @@
-#include <ESP8266.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <EEPROM.h>
@@ -24,23 +23,20 @@ void setup() {
   sensors.begin();
   sensors.setResolution(boilerSensor, 10);
   sensors.setResolution(solarPanelSensor, 10);
-
-  // Startup WiFi
-  setupWiFi();
 }
 
 void loop() {
   // Update temperatures
   updateTemp();
   
-  // Handle http request
-  httpRequest();
-
   // Handle heater on/off
   checkHeaterStatus();
 
   // Handle pump on/off
   checkPumpStatus();
+
+  // Read commands from angent
+  readCommand();
 }
 
 /**
@@ -53,10 +49,10 @@ void updateTemp() {
   float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
 
   // Workaround for eventual innacurate readings
-  if (readBoilerTemp > 5 && readBoilerTemp < 70) {
+  if (readBoilerTemp > 5 && readBoilerTemp < 99) {
     boilerTemp = readBoilerTemp;
   }
-  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 70) {
+  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 99) {
     solarPanelTemp = readSolarPanelTemp;
   }
 }
@@ -198,32 +194,31 @@ void checkPumpStatus() {
   }
 }
 
-/**
- * WIFI and HTTP CONTROL/STATUS FUNCTIONS
+/** 
+ *  Communication functions
  */
-// Main http request listener
-void httpRequest() {
-  uint8_t buffer[256] = {0};
-  uint8_t mux_id;
-  uint32_t len = wifi.recv(&mux_id, buffer, sizeof(buffer), 100);
-  if (len > 0) {
-    // Handle command
-    String command = "";
-    for (int i = 0; i < len; i++) {
-      command += (char)buffer[i];
+void readCommand() {
+  String command;
+
+  // Read it
+  while (Serial.available()) {
+    delay(3); // Delay to allow the buffer to fill up
+    if (Serial.available() > 0) {
+      command += (char)Serial.read();
     }
-    handleHttpCommand(mux_id, command);
+  } 
+
+  // Check it
+  if (command.length() > 0) {
+    handleCommand(command);
+    // Write response
+    Serial.print(getData());
   }
 }
 
-// Handle http request
-void handleHttpCommand(uint8_t mux_id, String command) {
-  // This is the response that will be built.
-  String response;
-
-  if (command.startsWith("GET")) {
-    response = getStatus();
-  } else if (command.startsWith("PUT")) {
+// Handle command
+void handleCommand(String command) {
+  if (command.startsWith("PUT")) {
     unsigned long heaterOverrideDuration = 0;
     unsigned long pumpOverrideDuration = 0;
     if (command.startsWith("PUT /reset")) {
@@ -231,67 +226,46 @@ void handleHttpCommand(uint8_t mux_id, String command) {
       disableHeaterOverride();
       disablePumpOverride();
       disablePump();
-      response = getStatus();
     } else if (command.startsWith("PUT /temp/on/")) {
       setHeaterOnTemp(command.substring(13, 15).toFloat());
       disableHeaterOverride();
-      response = getStatus();
     } else if (command.startsWith("PUT /temp/off/")) {
       setHeaterOffTemp(heaterOffTemp = command.substring(14, 16).toFloat());
       disableHeaterOverride();
-      response = getStatus();
     } else if (command.startsWith("PUT /heater/on")) {
       if (command.charAt(14) == '/') {
         heaterOverrideDuration = atol(command.substring(15, 19).c_str());
       }
       enableHeater();
       setHeaterOverride(true, heaterOverrideDuration);
-      response = getStatus();
     } else if (command.startsWith("PUT /heater/auto")) {
       disableHeaterOverride();
-      response = getStatus();
     } else if (command.startsWith("PUT /heater/off")) {
       if (command.charAt(15) == '/') {
         heaterOverrideDuration = atol(command.substring(16, 20).c_str());
       }
       disableHeater();
       setHeaterOverride(true, heaterOverrideDuration);
-      response = getStatus();
     } else if (command.startsWith("PUT /pump/auto")) {
       disablePumpOverride();
-      response = getStatus();
+    } else if (command.startsWith("PUT /pump/on")) {
+      if (command.charAt(13) == '/') {
+        pumpOverrideDuration = atol(command.substring(14, 19).c_str());
+      }
+      enablePump();
+      setPumpOverride(true, pumpOverrideDuration);
     } else if (command.startsWith("PUT /pump/off")) {
       if (command.charAt(13) == '/') {
         pumpOverrideDuration = atol(command.substring(14, 19).c_str());
       }
       disablePump();
       setPumpOverride(true, pumpOverrideDuration);
-      response = getStatus();
-    } else {
-      response = getBadRequestResponse();
-    }
-  } else {
-    response = getBadRequestResponse();
+    } 
   }
-
-  // Send response
-  wifi.send(mux_id, (const uint8_t*)response.c_str(), response.length());
-  // This is commented because it is locking up sometimes.
-  //wifi.releaseTCP(mux_id);
-}
-
-// Get Bad request response - command not understood
-String getBadRequestResponse() {
-  return "HTTP/1.1 400 Bad Request\r\nServer: Arduino/ESP8266\r\nContent-Type: application/json\r\nContent-Length: 33\r\nConnection: Closed\r\n\r\n{\"error\":\"Command not supported\"}";
 }
 
 // Build json response
-String getStatus() {
-  String responseHeader = "HTTP/1.1 200 OK\r\n";
-  responseHeader += "Server: Arduino/ESP8266\r\n";
-  responseHeader += "Content-Type: application/json\r\n";
-  responseHeader += "Connection: Closed\r\n";
-  responseHeader += "Content-Length: ";
+String getData() {
   String responseBody = "{\"boilerTemperature\":";
   responseBody += getBoilerTemp();
   responseBody += ", \"solarPanelTemperature\": ";
@@ -316,26 +290,8 @@ String getStatus() {
     responseBody += ", \"pumpOverrideUntil\": ";
     responseBody += (pumpOverrideUntil - millis());
   } 
-  responseBody += "}";
-  String response = responseHeader;
-  response += responseBody.length();
-  response += "\r\n\r\n";
-  response += responseBody;
-  return response;
-}
-
-/**
- * SETUP FUNCTIONS
- */
-// Connect to wifi network and setup listen port
-void setupWiFi() {
-  ESP8266_SERIAL.begin(ESP8266_SPEED);
-  wifi.setOprToStation();
-  wifi.joinAP(WIFI_SSID, WIFI_PASSWORD);
-  wifi.enableMUX();
-  wifi.startTCPServer(WIFI_SERVER_PORT);
-  wifi.setTCPServerTimeout(WIFI_SERVER_TIMEOUT);
-  ESP8266_SERIAL.println("AT+CIPSTA=\"192.168.1.211\"");
+  responseBody += "}\r\n\r\n";
+  return responseBody;
 }
 
 // Check EEPROM and reset if needed.
