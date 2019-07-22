@@ -17,7 +17,7 @@ const port = new SerialPort(actTtyPort, {baudRate:actTtyBaud});
 const parser = port.pipe(new Readline({ delimiter: '\r\n\r\n' }));
 
 // Connect to web agent.
-const authProp = JSON.parse(fs.readFileSync('./internal/auth.json','utf8'));
+const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
 webAgent = io.connect('https://italopulga.ddns.net:8099',
 	{
 		secure:true,
