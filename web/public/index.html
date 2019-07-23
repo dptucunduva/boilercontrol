@@ -88,7 +88,7 @@
                         $("#updateDt").html(" - Atualizado às " + data.updateDt);
                         $("#heater-range").html(data.heaterOnTemperature + "&#8451; a " + data.heaterOffTemperature + "&#8451;");
                         $("#panel-temp").html(data.solarPanelTemperature + "&#8451;");
-                        if (data.boilerTemperature > 5 && data.boilerTemperature < 70) {
+                        if (data.boilerTemperature > 5 && data.boilerTemperature < 90) {
                                 $("#boilerTemperature").html(data.boilerTemperature + "&#8451;");
                         }
                         if(data.heaterOverride && data.heaterEnabled) {
