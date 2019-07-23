@@ -4,8 +4,8 @@
 <link rel="shortcut icon" type="image/png" href="/favicon.png"/>
 <title>Controle do aquecedor solar</title>
 
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
-        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
 
@@ -51,6 +51,16 @@
                                 });
                         });
 
+                        $('#pump-on').click(  function () {
+                                $.ajax({
+                                        url: '/pump/on/0005',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
                         $('#pump-off').click(  function () {
                                 $.ajax({
                                         url: '/pump/off/9999',
@@ -74,7 +84,7 @@
                         });
                 });
 
-        function showData(data) {
+                function showData(data) {
                         $("#updateDt").html(" - Atualizado às " + data.updateDt);
                         $("#heater-range").html(data.heaterOnTemperature + "&#8451; a " + data.heaterOffTemperature + "&#8451;");
                         $("#panel-temp").html(data.solarPanelTemperature + "&#8451;");
@@ -95,12 +105,18 @@
                                 $("#heater-on").removeClass("active");
                         }
 
-                        if(data.pumpOverride) {
+                        if(data.pumpOverride && data.pumpEnabled) {
+                                $("#pump-off").removeClass("active");
+                                $("#pump-auto").removeClass("active");
+                                $("#pump-on").addClass("active");
+                        } else if (data.pumpOverride && !data.pumpEnabled) {
                                 $("#pump-off").addClass("active");
                                 $("#pump-auto").removeClass("active");
+                                $("#pump-on").removeClass("active");
                         } else {
                                 $("#pump-off").removeClass("active");
                                 $("#pump-auto").addClass("active");
+                                $("#pump-on").removeClass("active");
                         }
 
                         if (data.heaterEnabled) {
@@ -176,7 +192,8 @@
                 <h5>&nbsp;Bomba de circula&ccedil;&atilde;o:</h5>
                 <div class="list-group">
                   <a href="#" id="pump-off" class="list-group-item list-group-item-action">Desligada</a>
-                  <a href="#" id="pump-auto" class="list-group-item list-group-item-action">Autom&aacute;tica</a>
+                  <a href="#" id="pump-auto" class="list-group-item list-group-item-action">Autom&aacute;tica <span id="pump-status"></span></a>
+                  <a href="#" id="pump-on" class="list-group-item list-group-item-action">Ligada</a>
                 </div>
         </div>
 </body>

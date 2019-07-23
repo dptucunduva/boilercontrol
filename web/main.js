@@ -100,6 +100,12 @@ app.put('/heater/auto', function (req, res) {
 	writeData(req, res);
 })
 
+// Pump on
+app.put('/pump/on/:time', function (req, res) {
+	admin.emit('pumpOn', req.params.time);
+	writeData(req, res);
+})
+
 // Pump off
 app.put('/pump/off/:time', function (req, res) {
 	admin.emit('pumpOff', req.params.time);
