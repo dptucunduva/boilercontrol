@@ -37,6 +37,8 @@ void loop() {
 
   // Read commands from angent
   readCommand();
+
+  delay(500);
 }
 
 /**
