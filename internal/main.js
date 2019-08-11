@@ -78,7 +78,7 @@ function getData() {
 	port.write("GET /");
 }
 getData();
-setInterval(getData, 5000);
+setInterval(getData, 2000);
 
 // Command handling
 // Heater on
