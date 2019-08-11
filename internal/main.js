@@ -6,6 +6,7 @@ var app = express();
 var http = require('http');
 var io = require('socket.io-client');
 var fs = require('fs');
+var SunCalc = require('suncalc');
 const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline')
 
@@ -52,6 +53,25 @@ parser.on('data', function(data) {
 		console.log("Error parsing data: " + data);
 	}
 });
+
+// Every 5 minutes, check if the sun is potentially heating solar panels
+function checkSunTime() {
+	var sunData = SunCalc.getTimes(new Date(), -23.1823096, -45.9502316);
+	var sunrise = sunData.sunriseEnd;
+	var sunset = sunData.sunsetStart;
+	var now = new Date();
+
+	sunrise.setHours(sunrise.getHours() + 2);
+	sunset.setHours(sunset.getHours() - 1.5);
+
+	if (now > sunrise  && now < sunset) {
+		port.write("PUT /cycle/on");
+	} else {
+		port.write("PUT /cycle/off");
+	}
+}
+checkSunTime();
+setInterval(checkSunTime, 5*60*1000);
 
 // Update data each 5s
 function getData() {

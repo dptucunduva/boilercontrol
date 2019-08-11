@@ -34,4 +34,6 @@ unsigned long heaterOverrideUntil;
 boolean pumpEnabled;
 boolean pumpOverride;
 unsigned long pumpOverrideUntil;
+unsigned long lastTimePumpEnabled = 0L;
+boolean cycleEnabled = false;
 

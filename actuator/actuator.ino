@@ -37,8 +37,6 @@ void loop() {
 
   // Read commands from angent
   readCommand();
-
-  delay(500);
 }
 
 /**
@@ -50,11 +48,12 @@ void updateTemp() {
   float readBoilerTemp = sensors.getTempC(boilerSensor);
   float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
 
-  // Workaround for eventual innacurate readings
-  if (readBoilerTemp > 5 && readBoilerTemp < 99) {
+  // Workaround for eventual innacurate readings. 
+  // 85 is a temperature that the sensor returns when there is an error reading, so we ignore it.
+  if (readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85) {
     boilerTemp = readBoilerTemp;
   }
-  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 99) {
+  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 85) {
     solarPanelTemp = readSolarPanelTemp;
   }
 }
@@ -150,6 +149,9 @@ void enableHeater() {
  */
 // Disable pump
 void disablePump() {
+  if (pumpEnabled) {
+    lastTimePumpEnabled = millis();
+  }
   digitalWrite(PUMP_CONTROL_PIN, LOW);
   pumpEnabled = false;
 }
@@ -160,14 +162,29 @@ void enablePump() {
   pumpEnabled = true;
 }
 
+// Enable Cycle
+void enableCycle() {
+  cycleEnabled = true;
+}
+
+// Disable Cycle
+void disableCycle() {
+  cycleEnabled = false;
+}
+
+// Enable Cycle
+boolean getCycleEnabled() {
+  return cycleEnabled;
+}
+
 // Disable pump override
 void disablePumpOverride() {
   pumpOverride = false;
 }
 
 // Get pump override flag
-void setPumpOverride(boolean newOverride, unsigned long pumpOverrideDuration) {
-  pumpOverride = newOverride;
+void enablePumpOverride(unsigned long pumpOverrideDuration) {
+  pumpOverride = true;
   if (pumpOverrideDuration > 0) {
     pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000 * 60);
   } else {
@@ -187,12 +204,22 @@ void checkPumpStatus() {
     disablePumpOverride();
     pumpOverrideUntil = 0;
   } 
+
+  // Update pump enabled timestamp
+  if (pumpEnabled) {
+    lastTimePumpEnabled = millis();
+  }
     
   // Check if pump shoud be enabled or disabled - Enabled only if solarPanelTemp is 5C higher or more, and disabled if it is 2C higher or less
   if (getSolarPanelTemp() >= (getBoilerTemp()+5) && !getPumpOverride()) {
     enablePump();
   } else if (getSolarPanelTemp() <= (getBoilerTemp()+2) && !getPumpOverride()) {
     disablePump();
+  } 
+  
+  // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 3 seconds for the panel sensor to get an accurate reading.
+  if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-5) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
+    enablePumpOverride(millis() + (3 * 1000));
   }
 }
 
@@ -228,6 +255,10 @@ void handleCommand(String command) {
       disableHeaterOverride();
       disablePumpOverride();
       disablePump();
+    } else if (command.startsWith("PUT /cycle/on")) {
+      enableCycle();
+    } else if (command.startsWith("PUT /cycle/off")) {
+      disableCycle();
     } else if (command.startsWith("PUT /temp/on/")) {
       setHeaterOnTemp(command.substring(13, 15).toFloat());
       disableHeaterOverride();
@@ -255,13 +286,13 @@ void handleCommand(String command) {
         pumpOverrideDuration = atol(command.substring(14, 19).c_str());
       }
       enablePump();
-      setPumpOverride(true, pumpOverrideDuration);
+      enablePumpOverride(pumpOverrideDuration);
     } else if (command.startsWith("PUT /pump/off")) {
       if (command.charAt(13) == '/') {
         pumpOverrideDuration = atol(command.substring(14, 19).c_str());
       }
       disablePump();
-      setPumpOverride(true, pumpOverrideDuration);
+      enablePumpOverride(pumpOverrideDuration);
     } 
   }
 }
