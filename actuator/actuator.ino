@@ -218,7 +218,7 @@ void checkPumpStatus() {
   } 
   
   // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 3 seconds for the panel sensor to get an accurate reading.
-  if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-5) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
+  if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-10) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
     enablePumpOverride(millis() + (3 * 1000));
   }
 }
@@ -317,6 +317,8 @@ String getData() {
   }
   responseBody += ", \"pumpEnabled\": ";
   responseBody += pumpEnabled ? "true" : "false";
+  responseBody += ", \"cycleEnabled\": ";
+  responseBody += cycleEnabled ? "true" : "false";
   responseBody += ", \"pumpOverride\": ";
   responseBody += getPumpOverride() ? "true" : "false";
   if (getPumpOverride()) {

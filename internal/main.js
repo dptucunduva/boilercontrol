@@ -54,7 +54,7 @@ parser.on('data', function(data) {
 	}
 });
 
-// Every 5 minutes, check if the sun is potentially heating solar panels
+// Every 17s, check if the sun is potentially heating solar panels
 function checkSunTime() {
 	var sunData = SunCalc.getTimes(new Date(), -23.1823096, -45.9502316);
 	var sunrise = sunData.sunriseEnd;
@@ -71,7 +71,7 @@ function checkSunTime() {
 	}
 }
 checkSunTime();
-setInterval(checkSunTime, 5*60*1000);
+setInterval(checkSunTime, 17000);
 
 // Update data each 5s
 function getData() {
