@@ -16,7 +16,7 @@ const httpServer = http.createServer(appRedirect)
 appRedirect.get('*', function(req, res) {  
     res.redirect('https://' + req.headers.host + req.url);
 })
-httpServer.listen(80);
+httpServer.listen(8080);
 
 // HTTPS server
 var sslProp = JSON.parse(fs.readFileSync('cert.json','utf8'));
@@ -26,7 +26,7 @@ const credentials = {
 	ca: fs.readFileSync(sslProp.ca, 'utf8')
 };
 const httpsServer = https.createServer(credentials, app)
-httpsServer.listen(443);
+httpsServer.listen(8443);
 
 // Authentication
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
