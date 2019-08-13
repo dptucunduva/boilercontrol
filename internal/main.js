@@ -8,7 +8,7 @@ var io = require('socket.io-client');
 var fs = require('fs');
 var SunCalc = require('suncalc');
 const SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline')
+const Readline = require('@serialport/parser-readline');
 
 // Actuator connections config
 var actTtyPort = '/dev/ttyACM0';
@@ -16,6 +16,9 @@ var actTtyPort = '/dev/ttyACM0';
 var actTtyBaud = 115200;
 const port = new SerialPort(actTtyPort, {baudRate:actTtyBaud});
 const parser = port.pipe(new Readline({ delimiter: '\r\n\r\n' }));
+
+// Control variables
+var cycle = "auto";
 
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
@@ -42,6 +45,14 @@ function addExtraData(data) {
     minutes = minutes < 10 ? '0'+minutes : minutes;
     seconds = seconds < 10 ? '0'+seconds : seconds;
 	jsonData.updateDt = hours + ':' + minutes + ':' + seconds;
+
+	// cycle
+	if (cycle == "auto") {
+		jsonData.cycleAuto = true;
+	} else {
+		jsonData.cycleAuto = false;
+	}
+
 	return JSON.stringify(jsonData);
 }
 
@@ -64,10 +75,16 @@ function checkSunTime() {
 	sunrise.setHours(sunrise.getHours() + 2);
 	sunset.setHours(sunset.getHours() - 1.5);
 
-	if (now > sunrise  && now < sunset) {
+	if (cycle == "on") {
 		port.write("PUT /cycle/on");
-	} else {
+	} else if (cycle == "off") {
 		port.write("PUT /cycle/off");
+	} else if (cycle == "auto") {
+		if (now > sunrise  && now < sunset) {
+			port.write("PUT /cycle/on");
+		} else {
+			port.write("PUT /cycle/off");
+		}
 	}
 }
 checkSunTime();
@@ -94,6 +111,25 @@ webAgent.on('heaterOff', function (timing) {
 // Heater auto
 webAgent.on('heaterAuto', function () {
 	port.write("PUT /heater/auto");
+});
+
+// Pump regular cycling
+// Cycling on
+webAgent.on('cycleOn', function(timing) {
+	port.write("PUT /cycle/on");
+	cycle = "on";
+});
+
+// Cycling off
+webAgent.on('cycleOff', function (timing) {
+	port.write("PUT /cycle/off");
+	cycle = "off";
+});
+
+// Cycling auto
+webAgent.on('cycleAuto', function () {
+	port.write("PUT /cycle/auto");
+	cycle = "auto";
 });
 
 // Pump off

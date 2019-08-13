@@ -142,6 +142,23 @@
                         } else {
                                 $("#pump-until").html("&nbsp;");
                         }
+
+                        if (data.cycleAuto) {
+                                $("#cycle-status").html("&nbsp; (" + data.cycleEnabled + ")");
+                                $("#cycle-off").removeClass("active");
+                                $("#cycle-auto").addClass("active");
+                                $("#cycle-on").removeClass("active");
+                        } else {
+                                if (data.cycleEnabled) {
+                                        $("#cycle-off").removeClass("active");
+                                        $("#cycle-auto").removeClass("active");
+                                        $("#cycle-on").addClass("active");
+                                } else {
+                                        $("#cycle-off").addClass("active");
+                                        $("#cycle-auto").removeClass("active");
+                                        $("#cycle-on").removeClass("active");
+                                }
+                        }
                 }
 
                 function formatDate(date) {
@@ -194,6 +211,13 @@
                   <a href="#" id="pump-off" class="list-group-item list-group-item-action">Desligada</a>
                   <a href="#" id="pump-auto" class="list-group-item list-group-item-action">Autom&aacute;tica <span id="pump-status"></span></a>
                   <a href="#" id="pump-on" class="list-group-item list-group-item-action">Ligada</a>
+                </div>
+                <br/>
+                <h5>&nbsp;Cycle da bomba:</h5>
+                <div class="list-group">
+                  <a href="#" id="cycle-off" class="list-group-item list-group-item-action">Desligado</a>
+                  <a href="#" id="cycle-auto" class="list-group-item list-group-item-action">Autom&aacute;tico <span id="cycle-status"></span></a>
+                  <a href="#" id="cycle-on" class="list-group-item list-group-item-action">Ligado</a>
                 </div>
         </div>
         <br/><br/>

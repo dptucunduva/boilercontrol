@@ -100,6 +100,24 @@ app.put('/heater/auto', function (req, res) {
 	writeData(req, res);
 })
 
+// Cycle on
+app.put('/cycle/on', function (req, res) {
+	admin.emit('cycleOn');
+	writeData(req, res);
+})
+
+// Cycle off
+app.put('/cycle/off', function (req, res) {
+	admin.emit('cycleOff');
+	writeData(req, res);
+})
+
+// Cycle auto
+app.put('/cycle/auto', function (req, res) {
+	admin.emit('cycleAuto');
+	writeData(req, res);
+})
+
 // Pump on
 app.put('/pump/on/:time', function (req, res) {
 	admin.emit('pumpOn', req.params.time);

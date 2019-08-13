@@ -186,7 +186,7 @@ void disablePumpOverride() {
 void enablePumpOverride(unsigned long pumpOverrideDuration) {
   pumpOverride = true;
   if (pumpOverrideDuration > 0) {
-    pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000 * 60);
+    pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000);
   } else {
     pumpOverrideUntil = millis() + 8640000L;
   }
@@ -219,7 +219,8 @@ void checkPumpStatus() {
   
   // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 3 seconds for the panel sensor to get an accurate reading.
   if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-10) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
-    enablePumpOverride(millis() + (3 * 1000));
+    enablePump();
+    enablePumpOverride(5);
   }
 }
 
@@ -286,13 +287,13 @@ void handleCommand(String command) {
         pumpOverrideDuration = atol(command.substring(14, 19).c_str());
       }
       enablePump();
-      enablePumpOverride(pumpOverrideDuration);
+      enablePumpOverride(pumpOverrideDuration*60);
     } else if (command.startsWith("PUT /pump/off")) {
       if (command.charAt(13) == '/') {
         pumpOverrideDuration = atol(command.substring(14, 19).c_str());
       }
       disablePump();
-      enablePumpOverride(pumpOverrideDuration);
+      enablePumpOverride(pumpOverrideDuration*60);
     } 
   }
 }
