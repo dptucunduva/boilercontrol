@@ -11,7 +11,7 @@
 
     <script type="text/javascript">
         $(document).ready(function() {
-                        $('#heater-on').click(  function () {
+                $('#heater-on').click(  function () {
                                 $.ajax({
                                         url: '/heater/on/9999',
                                         type: 'PUT',
@@ -34,6 +34,36 @@
                         $('#heater-auto').click(  function () {
                                 $.ajax({
                                         url: '/heater/auto',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#cycle-on').click(  function () {
+                                $.ajax({
+                                        url: '/cycle/on',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#cycle-off').click(  function () {
+                                $.ajax({
+                                        url: '/cycle/off',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+                        $('#cycle-auto').click(  function () {
+                                $.ajax({
+                                        url: '/cycle/auto',
                                         type: 'PUT',
                                         success: function (data) {
                                                 showData(data);
