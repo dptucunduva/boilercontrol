@@ -217,7 +217,7 @@ void checkPumpStatus() {
     disablePump();
   } 
   
-  // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 3 seconds for the panel sensor to get an accurate reading.
+  // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 5 seconds for the panel sensor to get an accurate reading.
   if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-10) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
     enablePump();
     enablePumpOverride(5);

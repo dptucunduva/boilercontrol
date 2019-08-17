@@ -174,7 +174,7 @@
                         }
 
                         if (data.cycleAuto) {
-                                $("#cycle-status").html("&nbsp; (" + data.cycleEnabled + ")");
+                                $("#cycle-status").html("&nbsp; (" + (data.cycleEnabled ? "ligado)" : "desligado)"));
                                 $("#cycle-off").removeClass("active");
                                 $("#cycle-auto").addClass("active");
                                 $("#cycle-on").removeClass("active");
