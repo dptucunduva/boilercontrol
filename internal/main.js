@@ -116,20 +116,20 @@ webAgent.on('heaterAuto', function () {
 // Pump regular cycling
 // Cycling on
 webAgent.on('cycleOn', function(timing) {
-	port.write("PUT /cycle/on");
 	cycle = "on";
+	checkSunTime();
 });
 
 // Cycling off
 webAgent.on('cycleOff', function (timing) {
-	port.write("PUT /cycle/off");
 	cycle = "off";
+	checkSunTime();
 });
 
 // Cycling auto
 webAgent.on('cycleAuto', function () {
-	port.write("PUT /cycle/auto");
 	cycle = "auto";
+	checkSunTime();
 });
 
 // Pump off
