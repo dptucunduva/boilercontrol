@@ -11,9 +11,19 @@
 
     <script type="text/javascript">
         $(document).ready(function() {
-                $('#heater-on').click(  function () {
+						$('#heater-on').click(  function () {
                                 $.ajax({
                                         url: '/heater/on/9999',
+                                        type: 'PUT',
+                                        success: function (data) {
+                                                showData(data);
+                                        }
+                                });
+                        });
+
+						$('#heater-on-3h').click(  function () {
+                                $.ajax({
+                                        url: '/heater/on/180',
                                         type: 'PUT',
                                         success: function (data) {
                                                 showData(data);
@@ -229,7 +239,7 @@
                                 </div>
                         </div>
                 </div>
-                <h5>&nbsp;Aquecimento el&eacute;trico:</h5>
+                <h5>&nbsp;Aquecimento el&eacute;trico:&nbsp;&nbsp;&nbsp;<a href="#" id="heater-on-3h" style="color:#aaaaaa">Ativar por 3h</a></h5>
                 <div class="list-group">
                   <a href="#" id="heater-off" class="list-group-item list-group-item-action">Desligado</a>
                   <a href="#" id="heater-auto" class="list-group-item list-group-item-action">Autom&aacute;tico <span id="heater-status"></span></a>
