@@ -152,13 +152,13 @@ void disablePump() {
   if (pumpEnabled) {
     lastTimePumpEnabled = millis();
   }
-  digitalWrite(PUMP_CONTROL_PIN, LOW);
+  digitalWrite(PUMP_CONTROL_PIN, HIGH);
   pumpEnabled = false;
 }
 
 // Enable pump
 void enablePump() {
-  digitalWrite(PUMP_CONTROL_PIN, HIGH);
+  digitalWrite(PUMP_CONTROL_PIN, LOW);
   pumpEnabled = true;
 }
 
