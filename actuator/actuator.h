@@ -18,8 +18,8 @@ DeviceAddress solarPanelSensor = { 0x28, 0x9D, 0x1B, 0x77, 0x91, 0x06, 0x02, 0x5
 DeviceAddress boilerSensor = { 0x28, 0xFF, 0x9B, 0x09, 0xB3, 0x17, 0x01, 0x98 };
 
 // Temperature setup
-float boilerTemp = 45;
-float solarPanelTemp = 45;
+float boilerTemp = 44;
+float solarPanelTemp = 44;
 const float HEATER_ON_TEMP_DEFAULT = 41;
 const float HEATER_OFF_TEMP_DEFAULT = 42;
 const int heaterOnEepromAddr = 10;

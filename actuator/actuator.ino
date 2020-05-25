@@ -49,11 +49,14 @@ void updateTemp() {
   float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
 
   // Workaround for eventual innacurate readings. 
-  // 85 is a temperature that the sensor returns when there is an error reading, so we ignore it.
-  if (readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85) {
+  // 85 (boiler) or 45 (panels) are temperaturees that the sensor returns when there is an error reading, so we ignore it.
+  // Max temp change is 5 degrees between readings. If temp changes more than 5C, ignore it. It is probably a misread.
+  if ( readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85 &&
+       (readBoilerTemp != 44 || abs(readBoilerTemp - boilerTemp) < 5) ) {
     boilerTemp = readBoilerTemp;
   }
-  if (readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 85) {
+  if ( readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 45  &&
+       (solarPanelTemp == 44 || abs(readSolarPanelTemp - solarPanelTemp) < 5) ) {
     solarPanelTemp = readSolarPanelTemp;
   }
 }
