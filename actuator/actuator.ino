@@ -1,6 +1,9 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <EEPROM.h>
+#include <PubSubClient.h>
+#include <Dns.h>
+#include <Ethernet.h>
 #include "actuator.h"
 
 void setup() {
@@ -23,9 +26,22 @@ void setup() {
   sensors.begin();
   sensors.setResolution(boilerSensor, 10);
   sensors.setResolution(solarPanelSensor, 10);
+  nextTempCheck = millis();
+  sensors.requestTemperatures();
+  boilerTemp = sensors.getTempC(boilerSensor);
+  solarPanelTemp = sensors.getTempC(solarPanelSensor);
+
+  // Ethernet
+  startEthernet();
+
+  // MQTT communication
+  startMQTT();
 }
 
 void loop() {
+  // Check if we are connected to the network and to MQTT server.
+  checkEthernetAndMqtt();
+
   // Update temperatures
   updateTemp();
   
@@ -34,9 +50,6 @@ void loop() {
 
   // Handle pump on/off
   checkPumpStatus();
-
-  // Read commands from angent
-  readCommand();
 }
 
 /**
@@ -44,20 +57,34 @@ void loop() {
  */
 // Get temperature readings from sensors
 void updateTemp() {
-  sensors.requestTemperatures();
-  float readBoilerTemp = sensors.getTempC(boilerSensor);
-  float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
+  if (nextTempCheck <= millis()) {
+    nextTempCheck = millis() + TEMP_CHECK_INTERVAL;
+    sensors.requestTemperatures();
+    float readBoilerTemp = sensors.getTempC(boilerSensor);
+    float readSolarPanelTemp = sensors.getTempC(solarPanelSensor);
 
-  // Workaround for eventual innacurate readings. 
-  // 85 (boiler) or 45 (panels) are temperaturees that the sensor returns when there is an error reading, so we ignore it.
-  // Max temp change is 5 degrees between readings. If temp changes more than 5C, ignore it. It is probably a misread.
-  if ( readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85 &&
-       (readBoilerTemp != 44 || abs(readBoilerTemp - boilerTemp) < 5) ) {
-    boilerTemp = readBoilerTemp;
-  }
-  if ( readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 45  &&
-       (solarPanelTemp == 44 || abs(readSolarPanelTemp - solarPanelTemp) < 5) ) {
-    solarPanelTemp = readSolarPanelTemp;
+    Serial.print("Boiler sensor temperature read: ");
+    Serial.print(readBoilerTemp);
+    Serial.print("°C\n");
+    Serial.print("Solar panel sensor temperature read: ");
+    Serial.print(readSolarPanelTemp);
+    Serial.print("°C\n");
+ 
+    // Workaround for eventual innacurate readings. 
+    // 85 (boiler) or 45 (panels) are temperaturees that the sensor returns when there is an error reading, so we ignore it.
+    // Max temp change is 5 degrees between readings. If temp changes more than 5C, ignore it. It is probably a misread.
+    if ( readBoilerTemp != boilerTemp &&
+         readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85 &&
+         (readBoilerTemp != 44 || abs(readBoilerTemp - boilerTemp) < 5) ) {
+      boilerTemp = readBoilerTemp;
+      publishBoilerTemp();
+    }
+    if ( readSolarPanelTemp != solarPanelTemp &&
+         readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 45  &&
+         (solarPanelTemp == 44 || abs(readSolarPanelTemp - solarPanelTemp) < 5) ) {
+      solarPanelTemp = readSolarPanelTemp;
+      publishSolarPanelTemp();
+    }
   }
 }
 
@@ -69,48 +96,6 @@ float getBoilerTemp() {
 // Get current temperature
 float getSolarPanelTemp() {
   return solarPanelTemp;
-}
-
-// Get Heater ON temperature
-float getHeaterOnTemp() {
-  return heaterOnTemp;
-}
-
-// Set Heater ON temperature
-void setHeaterOnTemp(float newTemp) {
-  heaterOnTemp = newTemp;
-  EEPROM.put(heaterOnEepromAddr, heaterOnTemp);
-}
-
-// Get Heater OFF temperature
-float getHeaterOffTemp() {
-  return heaterOffTemp;
-}
-
-// Set Heater ON temperature
-void setHeaterOffTemp(float newTemp) {
-  heaterOffTemp = newTemp;
-  EEPROM.put(heaterOffEepromAddr, heaterOffTemp);
-}
-
-// Get temp override flag
-boolean getHeaterOverride() {
-  return tempOverride;
-}
-
-// Get temp override flag
-void setHeaterOverride(boolean newOverride, unsigned long heaterOverrideDuration) {
-  tempOverride = newOverride;
-  if (heaterOverrideDuration > 0) {
-    heaterOverrideUntil = millis() + (heaterOverrideDuration * 1000 * 60);
-  } else {
-    heaterOverrideUntil = millis() + 8640000L;
-  }
-}
-
-// Disable temp override
-void disableHeaterOverride() {
-  tempOverride = false;
 }
 
 /**
@@ -137,14 +122,68 @@ void checkHeaterStatus() {
 
 // Disable heater
 void disableHeater() {
+  boolean publish = heaterEnabled;
   digitalWrite(HEATER_CONTROL_PIN, HIGH);
   heaterEnabled = false;
+  if (publish) {
+    publishHeaterStatus();
+  }
 }
 
 // Enable heater
 void enableHeater() {
+  boolean publish = !heaterEnabled;
   digitalWrite(HEATER_CONTROL_PIN, LOW);
   heaterEnabled = true;
+  if (publish) {
+    publishHeaterStatus();
+  }
+}
+
+// Get Heater ON temperature
+float getHeaterOnTemp() {
+  return heaterOnTemp;
+}
+
+// Set Heater ON temperature
+void setHeaterOnTemp(float newTemp) {
+  heaterOnTemp = newTemp;
+  EEPROM.put(heaterOnEepromAddr, heaterOnTemp);
+  publishHeaterOnTemp();
+}
+
+// Get Heater OFF temperature
+float getHeaterOffTemp() {
+  return heaterOffTemp;
+}
+
+// Set Heater ON temperature
+void setHeaterOffTemp(float newTemp) {
+  heaterOffTemp = newTemp;
+  EEPROM.put(heaterOffEepromAddr, heaterOffTemp);
+  publishHeaterOffTemp();
+}
+
+// Get heater override flag
+boolean getHeaterOverride() {
+  return heaterOverride;
+}
+
+// Enable heater override. Arduino won't check for heater on/off temperatures during provided duration
+void enableHeaterOverride(unsigned long heaterOverrideDuration) {
+  heaterOverride = true;
+  if (heaterOverrideDuration > 0) {
+    heaterOverrideUntil = millis() + (heaterOverrideDuration * 1000 * 60);
+  } else {
+    heaterOverrideUntil = millis() + 8640000L;
+  }
+  publishHeaterOverride();
+}
+
+// Disable heater override
+void disableHeaterOverride() {
+  heaterOverride = false;
+  publishHeaterOverride();
 }
 
 /**
@@ -152,30 +191,46 @@ void enableHeater() {
  */
 // Disable pump
 void disablePump() {
+  boolean publish = pumpEnabled;
   if (pumpEnabled) {
     lastTimePumpEnabled = millis();
   }
   digitalWrite(PUMP_CONTROL_PIN, HIGH);
   pumpEnabled = false;
+  if (publish) {
+    publishPumpStatus();
+  }
 }
 
 // Enable pump
 void enablePump() {
+  boolean publish = !pumpEnabled;
   digitalWrite(PUMP_CONTROL_PIN, LOW);
   pumpEnabled = true;
+  if (publish) {
+    publishPumpStatus();
+  }
 }
 
 // Enable Cycle
 void enableCycle() {
+  boolean publish = !cycleEnabled;
   cycleEnabled = true;
+  if (publish) {
+    publishCycleStatus();
+  }
 }
 
 // Disable Cycle
 void disableCycle() {
+  boolean publish = cycleEnabled;
   cycleEnabled = false;
+  if (publish) {
+    publishCycleStatus();
+  }
 }
 
-// Enable Cycle
+// Get cycle status
 boolean getCycleEnabled() {
   return cycleEnabled;
 }
@@ -183,9 +238,10 @@ boolean getCycleEnabled() {
 // Disable pump override
 void disablePumpOverride() {
   pumpOverride = false;
+  publishPumpOverride();
 }
 
-// Get pump override flag
+// Enable pump override
 void enablePumpOverride(unsigned long pumpOverrideDuration) {
   pumpOverride = true;
   if (pumpOverrideDuration > 0) {
@@ -193,6 +249,7 @@ void enablePumpOverride(unsigned long pumpOverrideDuration) {
   } else {
     pumpOverrideUntil = millis() + 8640000L;
   }
+  publishPumpOverride();
 }
 
 // Get pump override flag
@@ -228,111 +285,353 @@ void checkPumpStatus() {
 }
 
 /** 
- *  Communication functions
+ *  Communication setup functions
  */
-void readCommand() {
-  String command;
+// Setup and start ethernet
+void startEthernet() {
+  Serial.println("(Re)Starting ethernet conectivity");
+  nextConectivityCheck = millis() + CONECTIVITY_CHECK_INTERVAL;
+  Ethernet.begin(mac, 10000L, 3000L);
+  dnsClient.begin(Ethernet.dnsServerIP());
+  myAddr = Ethernet.localIP();
+  dnsClient.getHostByName(MQTT_SERVER_HOSTNAME,mqttAddr);
 
-  // Read it
-  while (Serial.available()) {
-    delay(3); // Delay to allow the buffer to fill up
-    if (Serial.available() > 0) {
-      command += (char)Serial.read();
+  if (!sanitycheckClient.connect(MQTT_SERVER_HOSTNAME, 80)) {
+    Serial.print("Error connecting to [");
+    Serial.print(MQTT_SERVER_HOSTNAME);
+    Serial.println(":80]. Will assume ethernet did not start successfuly");
+  } else {
+    Serial.println("Ethernet (re)started successfuly. IPs that will be used:");
+    Serial.print("DHCP assigned IP addres: ");
+    Serial.print(myAddr);
+    Serial.print("\n");
+    Serial.print("MQTT server [");
+    Serial.print(MQTT_SERVER_HOSTNAME);
+    Serial.print("] resolved IP addres: ");
+    Serial.println(mqttAddr);
+    sanitycheckClient.stop();
+  }
+}
+
+// Setup mqtt server connection
+void startMQTT() {
+  Serial.print("(Re)Connecting to MQTT server at [");
+  Serial.print(MQTT_SERVER_HOSTNAME);
+  Serial.print("] with ID [");
+  Serial.print(BOILERCONTROL_CLIENT_ID);
+  Serial.println("]");
+  mqttClient.setServer(mqttAddr, 1883);
+  mqttClient.setKeepAlive(3000L);
+  mqttClient.setCallback(handleCommand);
+  mqttClient.connect(BOILERCONTROL_CLIENT_ID);
+  if (!mqttClient.connected()) {
+    Serial.print("MQTT server connection not OK. Error code ");
+    Serial.println(mqttClient.state());
+  } else {
+    Serial.println("MQTT server connection OK");
+    // Subscribe to all command topics - These are the topics that the webapp will use to trigger actions
+    mqttClient.subscribe(HEATER_SET_OVERRIDE_TOPIC);
+    mqttClient.subscribe(PUMP_SET_OVERRIDE_TOPIC);
+    mqttClient.subscribe(CYCLE_SET_STATUS_TOPIC);
+    mqttClient.subscribe(HEATER_SET_ON_TEMP);
+    mqttClient.subscribe(HEATER_SET_OFF_TEMP);
+    mqttClient.subscribe(REQUEST_FULL_REFRESH_TOPIC);
+    // Now publish a full status update.
+    publishAll();
+  }
+}
+
+//Check if we are connected
+void checkEthernetAndMqtt() {
+  mqttClient.loop();
+
+  if (nextConectivityCheck < millis()) {
+    nextConectivityCheck = millis() + CONECTIVITY_CHECK_INTERVAL;
+    // First ethernet. Simply connect to mqttserver por 80 to see if everything is ok.
+    if (!sanitycheckClient.connect(MQTT_SERVER_HOSTNAME, 80)) {
+      // Restart  Ethernet
+      Serial.println("Ethernet check not OK");
+      startEthernet();
+    } else {
+      Serial.println("Ethernet check OK");
+      sanitycheckClient.stop();
     }
-  } 
-
-  // Check it
-  if (command.length() > 0) {
-    handleCommand(command);
-    // Write response
-    Serial.print(getData());
+    
+    // Now MQTT
+    if (!mqttClient.connected()) {
+      Serial.print("MQTT server connection not OK. Error code ");
+      Serial.println(mqttClient.state());
+      startMQTT();
+    } else {
+      Serial.println("MQTT server connection OK");
+    }
   }
 }
 
-// Handle command
-void handleCommand(String command) {
-  if (command.startsWith("PUT")) {
-    unsigned long heaterOverrideDuration = 0;
-    unsigned long pumpOverrideDuration = 0;
-    if (command.startsWith("PUT /reset")) {
-      disableHeater();
-      disableHeaterOverride();
-      disablePumpOverride();
-      disablePump();
-    } else if (command.startsWith("PUT /cycle/on")) {
-      enableCycle();
-    } else if (command.startsWith("PUT /cycle/off")) {
-      disableCycle();
-    } else if (command.startsWith("PUT /temp/on/")) {
-      setHeaterOnTemp(command.substring(13, 15).toFloat());
-      disableHeaterOverride();
-    } else if (command.startsWith("PUT /temp/off/")) {
-      setHeaterOffTemp(heaterOffTemp = command.substring(14, 16).toFloat());
-      disableHeaterOverride();
-    } else if (command.startsWith("PUT /heater/on")) {
-      if (command.charAt(14) == '/') {
-        heaterOverrideDuration = atol(command.substring(15, 19).c_str());
-      }
-      enableHeater();
-      setHeaterOverride(true, heaterOverrideDuration);
-    } else if (command.startsWith("PUT /heater/auto")) {
-      disableHeaterOverride();
-    } else if (command.startsWith("PUT /heater/off")) {
-      if (command.charAt(15) == '/') {
-        heaterOverrideDuration = atol(command.substring(16, 20).c_str());
-      }
-      disableHeater();
-      setHeaterOverride(true, heaterOverrideDuration);
-    } else if (command.startsWith("PUT /pump/auto")) {
-      disablePumpOverride();
-    } else if (command.startsWith("PUT /pump/on")) {
-      if (command.charAt(13) == '/') {
-        pumpOverrideDuration = atol(command.substring(14, 19).c_str());
-      }
-      enablePump();
-      enablePumpOverride(pumpOverrideDuration*60);
-    } else if (command.startsWith("PUT /pump/off")) {
-      if (command.charAt(13) == '/') {
-        pumpOverrideDuration = atol(command.substring(14, 19).c_str());
-      }
-      disablePump();
-      enablePumpOverride(pumpOverrideDuration*60);
-    } 
+/**
+ * MQTT topic message handling functions
+ */
+// Publish a complete status update
+void publishAll() {
+  Serial.println("Starting a full publish");
+  publishBoilerTemp();
+  publishSolarPanelTemp();
+  publishHeaterStatus();
+  publishPumpStatus();
+  publishCycleStatus();
+  publishHeaterOnTemp();
+  publishHeaterOffTemp();
+  publishHeaterOverride();
+  publishPumpOverride();
+  Serial.println("Full publish finished");
+}
+
+// Publish boiler temperature
+void publishBoilerTemp() {
+  String message = "";
+  message += getBoilerTemp();
+  if (mqttClient.publish(BOILER_TEMP_TOPIC,message.c_str(),true)) {
+    Serial.print("Published boiler temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }else {
+    Serial.print("Error publishing boiler temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
   }
 }
 
-// Build json response
-String getData() {
-  String responseBody = "{\"boilerTemperature\":";
-  responseBody += getBoilerTemp();
-  responseBody += ", \"solarPanelTemperature\": ";
-  responseBody += getSolarPanelTemp();
-  responseBody += ", \"heaterOnTemperature\": ";
-  responseBody += getHeaterOnTemp();
-  responseBody += ", \"heaterOffTemperature\": ";
-  responseBody += getHeaterOffTemp();
-  responseBody += ", \"heaterEnabled\": ";
-  responseBody += heaterEnabled ? "true" : "false";
-  responseBody += ", \"heaterOverride\": ";
-  responseBody += getHeaterOverride() ? "true" : "false";
+// Publish solar panel temperature
+void publishSolarPanelTemp() {
+  String message = "";
+  message += getSolarPanelTemp();
+  if(mqttClient.publish(SOLAR_PANEL_TEMP_TOPIC,message.c_str(),true)) {
+    Serial.print("Published solar panel temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }else {
+    Serial.print("Error publishing solar panel temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }
+}
+
+// Publish heater status update
+void publishHeaterStatus() {
+  String message = heaterEnabled ? "enabled" : "disabled";
+  if(mqttClient.publish(HEATER_STATUS_TOPIC,message.c_str(),true)) {
+    Serial.print("Published heater status update to ");
+    Serial.println(message);
+  }else {
+    Serial.print("Error publishing heater status update to ");
+    Serial.println(message);
+  }
+}
+
+// Publish pump status update
+void publishPumpStatus() {
+  String message = pumpEnabled ? "enabled" : "disabled";
+  if(mqttClient.publish(PUMP_STATUS_TOPIC,message.c_str(),true)) {
+    Serial.print("Published pump status update to ");
+    Serial.println(message);
+  }else {
+    Serial.print("Error publishing pump status update to ");
+    Serial.println(message);
+  }
+}
+
+// Publish pump cycle status update
+void publishCycleStatus() {
+  String message = cycleEnabled ? "enabled" : "disabled";
+  if(mqttClient.publish(CYCLE_STATUS_TOPIC,message.c_str(),true)) {
+    Serial.print("Published pump cycle status update to ");
+    Serial.println(message);
+  }else {
+    Serial.print("Error publishing pump cycle status update to ");
+    Serial.println(message);
+  }
+}
+
+// Publish heater on temperature (heater is enabled if water temperature is below this value)
+void publishHeaterOnTemp() {
+  String message = "";
+  message += getHeaterOnTemp();
+  if (mqttClient.publish(HEATER_ON_TEMP_TOPIC,message.c_str(),true)) {
+    Serial.print("Published heater on temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }else {
+    Serial.print("Error publishing heater on temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }
+}
+
+// Publish heater off temperature (heater is disabled if water temperature is over this value)
+void publishHeaterOffTemp() {
+  String message = "";
+  message += getHeaterOffTemp();
+  if (mqttClient.publish(HEATER_OFF_TEMP_TOPIC,message.c_str(),true)) {
+    Serial.print("Published heater off temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }else {
+    Serial.print("Error publishing heater off temperature update to ");
+    Serial.print(message);
+    Serial.println(" °C");
+  }
+}
+
+// Publish heater override status - publish "disabled" or for how long, in minutes, override will take place
+void publishHeaterOverride() {
+  String message = "";
   if (getHeaterOverride()) {
-    responseBody += ", \"heaterOverrideUntil\": ";
-    responseBody += (heaterOverrideUntil - millis());
+    message += ((heaterOverrideUntil - millis())/1000);
+  } else {
+    message += "disabled";
   }
-  responseBody += ", \"pumpEnabled\": ";
-  responseBody += pumpEnabled ? "true" : "false";
-  responseBody += ", \"cycleEnabled\": ";
-  responseBody += cycleEnabled ? "true" : "false";
-  responseBody += ", \"pumpOverride\": ";
-  responseBody += getPumpOverride() ? "true" : "false";
-  if (getPumpOverride()) {
-    responseBody += ", \"pumpOverrideUntil\": ";
-    responseBody += (pumpOverrideUntil - millis());
-  } 
-  responseBody += "}\r\n\r\n";
-  return responseBody;
+
+  if (mqttClient.publish(HEATER_OVERRIDE_TOPIC,message.c_str(),true)) {
+    Serial.print("Published heater override update. ");
+    if (getHeaterOverride()) {
+      Serial.print("It will remain ");
+      Serial.print(heaterEnabled ? "ON for " : "OFF for ");
+      Serial.print(message);
+      Serial.println(" seconds");
+    }else {
+      Serial.println("There is no override in place");
+    }
+  }else {
+    Serial.println("Error publishing heater override update");
+  }
 }
 
+// Publish pump override status - publish "disabled" or for how long, in minutes, override will take place
+void publishPumpOverride() {
+  String message = "";
+  if (getPumpOverride()) {
+    message += ((pumpOverrideUntil - millis())/1000);
+  } else {
+    message += "disabled";
+  }
+
+  if (mqttClient.publish(PUMP_OVERRIDE_TOPIC,message.c_str(),true)) {
+    Serial.print("Published pump override update. ");
+    if (getPumpOverride()) {
+      Serial.print("It will remain ");
+      Serial.print(pumpEnabled ? "ON for " : "OFF for ");
+      Serial.print(message);
+      Serial.println(" seconds");
+    }else {
+      Serial.println("There is no override in place");
+    }
+  }else {
+    Serial.println("Error publishing pump override update");
+  }
+}
+
+// Callback function - handle mqtt events
+void handleCommand(char* topic, byte* payload, unsigned int length) {
+  // Convert payload to String
+  String payloadMessage = "";
+  for (int i = 0; i < length; i++)
+  {
+    payloadMessage += (char)payload[i];
+  }
+
+  // Log it
+  Serial.print("Received message [");
+  Serial.print(payloadMessage);
+  Serial.print("] in topic [");
+  Serial.print(topic);
+  Serial.println("]");
+
+  // Check which topic we got the message from and dispatch it.
+  if(strcmp(topic, HEATER_SET_OVERRIDE_TOPIC) == 0) {
+    handleHeaterOverrideMessage(payloadMessage);
+  } else if (strcmp(topic, PUMP_SET_OVERRIDE_TOPIC) == 0) {
+    handlePumpOverrideMessage(payloadMessage);
+  } else if (strcmp(topic, CYCLE_SET_STATUS_TOPIC) == 0) {
+    handleCycleMessage(payloadMessage);
+  } else if (strcmp(topic, HEATER_SET_ON_TEMP) == 0) {
+    handleHeaterRangeMessage(true, payloadMessage);
+  } else if (strcmp(topic, HEATER_SET_OFF_TEMP) == 0) {
+    handleHeaterRangeMessage(false, payloadMessage);
+  } else if (strcmp(topic, REQUEST_FULL_REFRESH_TOPIC) == 0) {
+    publishAll();
+  } else {
+    Serial.println("Topic not recognized, discarding message");
+  }
+}
+
+// Heater override message handler
+void handleHeaterOverrideMessage(String payloadMessage) {
+  unsigned long heaterOverrideDuration = 0;
+  if (payloadMessage.equals("auto")) {
+    disableHeaterOverride();
+  } else if (payloadMessage.startsWith("enable")) {
+    if (payloadMessage.charAt(6) == ',') {
+      heaterOverrideDuration = atol(payloadMessage.substring(7, 11).c_str());
+    }
+    enableHeater();
+    enableHeaterOverride(heaterOverrideDuration);
+  } else if (payloadMessage.startsWith("disable")) {
+    if (payloadMessage.charAt(7) == ',') {
+      heaterOverrideDuration = atol(payloadMessage.substring(8, 12).c_str());
+    }
+    disableHeater();
+    enableHeaterOverride(heaterOverrideDuration);
+  } else {
+    Serial.println("Message not recognized. Possible values are \"auto\", \"enable,9999\" or \"disable,9999\", where 9999 is the override duration in minutes");
+  }
+}
+
+// Pump override message handler
+void handlePumpOverrideMessage(String payloadMessage) {
+  unsigned long pumpOverrideDuration = 0;
+  if (payloadMessage.equals("auto")) {
+    disablePumpOverride();
+  } else if (payloadMessage.startsWith("enable")) {
+    if (payloadMessage.charAt(6) == ',') {
+      pumpOverrideDuration = atol(payloadMessage.substring(7, 11).c_str());
+    }
+    enablePump();
+    enablePumpOverride(pumpOverrideDuration);
+  } else if (payloadMessage.startsWith("disable")) {
+    if (payloadMessage.charAt(7) == ',') {
+      pumpOverrideDuration = atol(payloadMessage.substring(8, 12).c_str());
+    }
+    disablePump();
+    enablePumpOverride(pumpOverrideDuration);
+  } else {
+    Serial.println("Message not recognized. Possible values are \"auto\", \"enable,9999\" or \"disable,9999\", where 9999 is the override duration in minutes");
+  }
+}
+
+// Cycle message handler
+void handleCycleMessage(String payloadMessage) {
+  if (payloadMessage.equals("enable")) {
+    enableCycle();
+  } else if (payloadMessage.equals("disable")) {
+    disableCycle();
+  } else {
+    Serial.println("Message not recognized. Possible values are \"enable\" or \"disable\"");
+  }
+}
+
+// Heater temperature range message handler
+void handleHeaterRangeMessage(boolean onTemp, String payloadMessage) {
+  long temperature = atol(payloadMessage.c_str());
+  if (temperature >= 0 && temperature <= 99) {
+    onTemp ? setHeaterOnTemp(temperature): setHeaterOffTemp(temperature);
+  } else {
+    Serial.println("Invalid temperature. It must be a valid number between 0 and 99");
+  }
+}
+
+/**
+ * EEPROM functions
+ */
 // Check EEPROM and reset if needed.
 void eepromCheck() {
   float hasData = 0;
@@ -349,4 +648,3 @@ void eepromCheck() {
     EEPROM.put(heaterOffEepromAddr, heaterOffTemp);
   }
 }
-
