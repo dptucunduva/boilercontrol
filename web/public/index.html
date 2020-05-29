@@ -4,9 +4,9 @@
 <link rel="shortcut icon" type="image/png" href="/favicon.png"/>
 <title>Controle do aquecedor solar</title>
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
 
     <script type="text/javascript">
@@ -116,9 +116,9 @@
                                 type: 'GET',
                                 success: function (data) {
                                         showData(data);
-			                var socket = io('https://italopulga.ddns.net:8098', {secure:true});
+			                var socket = io('http://192.168.1.20:8098', {secure:true});
 			                socket.on('tempData', function (tempData) {
-			                    showData(JSON.parse(tempData));
+			                    showData(tempData);
 			                });
                                 }
                         });
@@ -126,16 +126,16 @@
 
                 function showData(data) {
                         $("#updateDt").html(" - Atualizado às " + data.updateDt);
-                        $("#heater-range").html(data.heaterOnTemperature + "&#8451; a " + data.heaterOffTemperature + "&#8451;");
-                        $("#panel-temp").html(data.solarPanelTemperature + "&#8451;");
-                        if (data.boilerTemperature > 5 && data.boilerTemperature < 90) {
-                                $("#boilerTemperature").html(data.boilerTemperature + "&#8451;");
+                        $("#heater-range").html(data.heaterOnTemp + "&#8451; a " + data.heaterOffTemp + "&#8451;");
+                        $("#panel-temp").html(data.solarPanelTemp + "&#8451;");
+                        if (data.reservoirTemp > 5 && data.reservoirTemp < 90) {
+                                $("#boilerTemperature").html(data.reservoirTemp + "&#8451;");
                         }
-                        if(data.heaterOverride && data.heaterEnabled) {
+                        if(data.heaterOverride != 'disabled' && data.heaterStatus == 'enabled') {
                                 $("#heater-off").removeClass("active");
                                 $("#heater-auto").removeClass("active");
                                 $("#heater-on").addClass("active");
-                        } else if (data.heaterOverride && !data.heaterEnabled) {
+                        } else if (data.heaterOverride != 'disabled' && data.heaterStatus == 'disabled') {
                                 $("#heater-off").addClass("active");
                                 $("#heater-auto").removeClass("active");
                                 $("#heater-on").removeClass("active");
@@ -145,11 +145,11 @@
                                 $("#heater-on").removeClass("active");
                         }
 
-                        if(data.pumpOverride && data.pumpEnabled) {
+                        if(data.pumpOverride != 'disabled' && data.pumpStatus == 'enabled') {
                                 $("#pump-off").removeClass("active");
                                 $("#pump-auto").removeClass("active");
                                 $("#pump-on").addClass("active");
-                        } else if (data.pumpOverride && !data.pumpEnabled) {
+                        } else if (data.pumpOverride != 'disabled' && data.pumpStatus == 'disabled') {
                                 $("#pump-off").addClass("active");
                                 $("#pump-auto").removeClass("active");
                                 $("#pump-on").removeClass("active");
@@ -159,37 +159,37 @@
                                 $("#pump-on").removeClass("active");
                         }
 
-                        if (data.heaterEnabled) {
+                        if (data.heaterStatus == 'enabled') {
                                 $("#heater-status").html("<i class=\"fas fa-check-circle text-success\"></i>&nbsp;&nbsp;Aquecedor");
                         } else {
                                 $("#heater-status").html("<i class=\"fas fa-times-circle text-warning\"></i>&nbsp;&nbsp;Aquecedor");
                         }
 
-                        if (data.heaterOverride) {
-                                $("#heater-until").html("Manual at&eacute; " + formatDate(new Date(new Date().getTime() + data.heaterOverrideUntil)));
+                        if (data.heaterOverride != 'disabled') {
+                                $("#heater-until").html("Manual at&eacute; " + formatDate(data.heaterOverride));
                         } else {
                                 $("#heater-until").html("&nbsp;");
                         }
 
-                        if (data.pumpEnabled) {
+                        if (data.pumpStatus == 'enabled') {
                                 $("#pump-status").html("<i class=\"fas fa-check-circle text-success\"></i>&nbsp;&nbsp;Bomba");
                         } else {
                                 $("#pump-status").html("<i class=\"fas fa-times-circle text-warning\"></i>&nbsp;&nbsp;Bomba");
                         }
 
-                        if (data.pumpOverride) {
-                                $("#pump-until").html("Manual at&eacute; " + formatDate(new Date(new Date().getTime() + data.pumpOverrideUntil)));
+                        if (data.pumpOverride != 'disabled') {
+                                $("#pump-until").html("Manual at&eacute; " + formatDate(data.pumpOverride));
                         } else {
                                 $("#pump-until").html("&nbsp;");
                         }
 
                         if (data.cycleAuto) {
-                                $("#cycle-status").html("&nbsp; (" + (data.cycleEnabled ? "ligado)" : "desligado)"));
+                                $("#cycle-status").html("&nbsp; (" + (data.cycleStatus == 'enabled' ? "ligado)" : "desligado)"));
                                 $("#cycle-off").removeClass("active");
                                 $("#cycle-auto").addClass("active");
                                 $("#cycle-on").removeClass("active");
                         } else {
-                                if (data.cycleEnabled) {
+                                if (data.cycleStatus == 'enabled') {
                                         $("#cycle-off").removeClass("active");
                                         $("#cycle-auto").removeClass("active");
                                         $("#cycle-on").addClass("active");
@@ -201,7 +201,8 @@
                         }
                 }
 
-                function formatDate(date) {
+                function formatDate(utcDate) {
+                        var date = new Date(utcDate);
                         var hours = date.getHours();
                         var minutes = date.getMinutes();
                         minutes = minutes < 10 ? '0'+minutes : minutes;

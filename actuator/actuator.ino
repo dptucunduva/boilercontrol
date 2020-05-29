@@ -245,7 +245,7 @@ void disablePumpOverride() {
 void enablePumpOverride(unsigned long pumpOverrideDuration) {
   pumpOverride = true;
   if (pumpOverrideDuration > 0) {
-    pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000);
+    pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000 * 60);
   } else {
     pumpOverrideUntil = millis() + 8640000L;
   }

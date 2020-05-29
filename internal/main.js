@@ -7,24 +7,127 @@ var http = require('http');
 var io = require('socket.io-client');
 var fs = require('fs');
 var SunCalc = require('suncalc');
-const SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline');
 
-// Actuator connections config
-var actTtyPort = '/dev/ttyACM0';
-//var actTtyPort = 'COM3';
-var actTtyBaud = 115200;
-const port = new SerialPort(actTtyPort, {baudRate:actTtyBaud});
-const parser = port.pipe(new Readline({ delimiter: '\r\n\r\n' }));
+// Broker connection config
+var mqtt = require('mqtt');
+var mqttClient  = mqtt.connect('mqtt://mqtt.home', {clientId: 'boiler-control-unit'});
 
 // Control variables
 var cycle = "auto";
+var currentStatus = {};
+var nextPublish;
+
+// Connect to MQTT server
+mqttClient.on('connect', function () {
+	mqttClient.subscribe('/boiler/sensor/#');
+});
+
+//  Everytime the actuator sends data, we get it and post it to the website
+mqttClient.on('message', function (topic, message) {
+	switch (topic) {
+		case '/boiler/sensor/reservoir/temperature':
+			currentStatus.reservoirTemp = message.toString();
+			break;
+		case '/boiler/sensor/solarpanel/temperature':
+			currentStatus.solarPanelTemp = message.toString();
+			break;
+		case '/boiler/sensor/heater/status':
+			currentStatus.heaterStatus = message.toString();
+			break;
+		case '/boiler/sensor/heater/ontemp':
+			currentStatus.heaterOnTemp = message.toString();
+			break;
+		case '/boiler/sensor/heater/offtemp':
+			currentStatus.heaterOffTemp = message.toString();
+			break;
+		case '/boiler/sensor/heater/override':
+			currentStatus.heaterOverride = message.toString() == "disabled" ? "disabled" : new Date(Date.now() + parseInt(message.toString())*1000)
+			break;
+		case '/boiler/sensor/pump/status':
+			currentStatus.pumpStatus = message.toString();
+			break;
+		case '/boiler/sensor/pump/override':
+			currentStatus.pumpOverride = message.toString() == "disabled" ? "disabled" : new Date(Date.now() + parseInt(message.toString())*1000)
+			break;
+		case '/boiler/sensor/cycle/status':
+			currentStatus.cycleStatus = message.toString();
+			break;
+		default:
+			console.log("Topic unknown");
+	}
+
+	// Force immediate publish
+	nextPublish = Date.now();
+});
+
+// Enrich data before publishing it
+function addExtraData(data) {
+	var date = new Date();
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    seconds = seconds < 10 ? '0'+seconds : seconds;
+	data.updateDt = hours + ':' + minutes + ':' + seconds;
+
+	// cycle
+	if (cycle == "auto") {
+		data.cycleAuto = true;
+	} else {
+		data.cycleAuto = false;
+	}
+
+	return data;
+}
+
+// Publish data each second if it has changed
+function getData() {
+	if (Date.now() >= nextPublish) {
+		dataToSend = addExtraData(currentStatus);
+		webAgent.emit('tempData',dataToSend);
+
+		// Publish at least once every 30s
+		nextPublish = Date.now() + 30000;
+	}
+}
+getData();
+setInterval(getData, 1000);
+
+function checkSunTime() {
+	// São José dos Campos coordinates
+	var sunData = SunCalc.getTimes(new Date(), -23.1823096, -45.9502316);
+	var sunrise = sunData.sunriseEnd;
+	var sunset = sunData.sunsetStart;
+	var now = new Date();
+
+	sunrise.setHours(sunrise.getHours() + 2);
+	sunset.setHours(sunset.getHours() - 1.5);
+
+	if (cycle == "on") {
+		mqttClient.publish('/boiler/actuator/cycle/setstatus','enable');
+	} else if (cycle == "off") {
+		mqttClient.publish('/boiler/actuator/cycle/setstatus','disable');
+	} else if (cycle == "auto") {
+		if (now > sunrise  && now < sunset) {
+			mqttClient.publish('/boiler/actuator/cycle/setstatus','enable');
+		} else {
+			mqttClient.publish('/boiler/actuator/cycle/setstatus','disable');
+		}
+	}
+}
+checkSunTime();
+setInterval(checkSunTime, 17000);
+
 
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
-webAgent = io.connect('https://italopulga.ddns.net:8099',
+webAgent = io.connect('http://localhost:8099',
 	{
 		secure:true,
+		reconnection: true,
+    	reconnectionDelay: 1000,
+    	reconnectionDelayMax : 5000,
+    	reconnectionAttempts: Infinity,
 		transportOptions: {
 			polling: {
 				extraHeaders: {
@@ -35,82 +138,20 @@ webAgent = io.connect('https://italopulga.ddns.net:8099',
 	}
 );
 
-// Enrich data from arduino
-function addExtraData(data) {
-	var jsonData = JSON.parse(data);
-	var date = new Date();
-    var hours = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    minutes = minutes < 10 ? '0'+minutes : minutes;
-    seconds = seconds < 10 ? '0'+seconds : seconds;
-	jsonData.updateDt = hours + ':' + minutes + ':' + seconds;
-
-	// cycle
-	if (cycle == "auto") {
-		jsonData.cycleAuto = true;
-	} else {
-		jsonData.cycleAuto = false;
-	}
-
-	return JSON.stringify(jsonData);
-}
-
-//  Everytime the actuator sends data, we get it and post it to the website
-parser.on('data', function(data) {
-	try {
-		webAgent.emit('tempData', addExtraData(data));
-	} catch (e) {
-		console.log("Error parsing data: " + data);
-	}
-});
-
-// Every 17s, check if the sun is potentially heating solar panels
-function checkSunTime() {
-	var sunData = SunCalc.getTimes(new Date(), -23.1823096, -45.9502316);
-	var sunrise = sunData.sunriseEnd;
-	var sunset = sunData.sunsetStart;
-	var now = new Date();
-
-	sunrise.setHours(sunrise.getHours() + 2);
-	sunset.setHours(sunset.getHours() - 1.5);
-
-	if (cycle == "on") {
-		port.write("PUT /cycle/on");
-	} else if (cycle == "off") {
-		port.write("PUT /cycle/off");
-	} else if (cycle == "auto") {
-		if (now > sunrise  && now < sunset) {
-			port.write("PUT /cycle/on");
-		} else {
-			port.write("PUT /cycle/off");
-		}
-	}
-}
-checkSunTime();
-setInterval(checkSunTime, 17000);
-
-// Update data each 5s
-function getData() {
-	port.write("GET /");
-}
-getData();
-setInterval(getData, 2000);
-
 // Command handling
 // Heater on
 webAgent.on('heaterOn', function(timing) {
-	port.write("PUT /heater/on/" + timing);
+	mqttClient.publish('/boiler/actuator/heater/setoverride','enable,'+timing);
 });
 
 // Heater off
 webAgent.on('heaterOff', function (timing) {
-	port.write("PUT /heater/off/" + timing);
+	mqttClient.publish('/boiler/actuator/heater/setoverride','disable,'+timing);
 });
 
 // Heater auto
 webAgent.on('heaterAuto', function () {
-	port.write("PUT /heater/auto");
+	mqttClient.publish('/boiler/actuator/heater/setoverride','auto');
 });
 
 // Pump regular cycling
@@ -134,15 +175,15 @@ webAgent.on('cycleAuto', function () {
 
 // Pump off
 webAgent.on('pumpOff', function (timing) {
-	port.write("PUT /pump/off/" + timing);
+	mqttClient.publish('/boiler/actuator/pump/setoverride','disable,'+timing);
 });
 
 // Pump on
 webAgent.on('pumpOn', function (timing) {
-	port.write("PUT /pump/on/" + timing);
+	mqttClient.publish('/boiler/actuator/pump/setoverride','enable,'+timing);
 });
 
 // Pump auto
 webAgent.on('pumpAuto', function () {
-	port.write("PUT /pump/auto");
+	mqttClient.publish('/boiler/actuator/pump/setoverride','auto');
 });
