@@ -13,7 +13,7 @@ import java.net.URL;
 
 public class TempUpdater implements Runnable {
 
-	private static final String AUTH_HEADER = "Basic ZHB0dWN1bmR1dmE6YWQzbDFuMA==";
+	private static final String AUTH_HEADER = "Basic XXXXXXXXXXXXXXXXXXXXX";
 
 	private TrayIcon trayIcon;
 	
@@ -40,7 +40,7 @@ public class TempUpdater implements Runnable {
 				} else {
 					trayIcon.setImage(createImage(temp, Colors.ALL_OFF));
 				}
-				trayIcon.setToolTip("Boiler temp at " + temp + "°");
+				trayIcon.setToolTip("Boiler temp at " + temp + "Â°");
 
 			} catch (Exception e) {
 				// TODO: handle exception
@@ -56,7 +56,7 @@ public class TempUpdater implements Runnable {
 		graphics.fillRect(0, 0, 16, 16);
 		graphics.setColor(color.cor);
 		graphics.setFont(new Font("Tahoma", Font.PLAIN, 10));
-		graphics.drawString(String.valueOf(Double.valueOf(temp.trim()).intValue()) + "°", 2, 12);
+		graphics.drawString(String.valueOf(Double.valueOf(temp.trim()).intValue()) + "Â°", 2, 12);
 
 		return bufferedImage;
 	}
