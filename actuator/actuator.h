@@ -7,6 +7,9 @@
 #define TEMP_CHECK_INTERVAL 2000;
 unsigned long nextConectivityCheck = millis() + CONECTIVITY_CHECK_INTERVAL;
 unsigned long nextTempCheck = millis() + TEMP_CHECK_INTERVAL;
+#define OVERRIDE_UNIT_MILISECONDS 0
+#define OVERRIDE_UNIT_SECONDS 1
+#define OVERRIDE_UNIT_MINUTES 2
 
 // Pin layout
 #define HEATER_CONTROL_PIN 40

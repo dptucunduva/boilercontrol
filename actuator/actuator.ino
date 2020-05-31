@@ -7,7 +7,7 @@
 #include "actuator.h"
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // EEPROM check and setup
   eepromCheck();
@@ -242,11 +242,21 @@ void disablePumpOverride() {
 }
 
 // Enable pump override
-void enablePumpOverride(unsigned long pumpOverrideDuration) {
+void enablePumpOverride(unsigned long pumpOverrideDuration, unsigned int unit) {
   pumpOverride = true;
   if (pumpOverrideDuration > 0) {
-    pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000 * 60);
+    if (unit == OVERRIDE_UNIT_MINUTES) {
+      pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000 * 60);
+    } else if (unit == OVERRIDE_UNIT_SECONDS) {
+      pumpOverrideUntil = millis() + (pumpOverrideDuration * 1000);
+    } else if (unit == OVERRIDE_UNIT_MILISECONDS) {
+      pumpOverrideUntil = millis() + pumpOverrideDuration;
+    } else {
+      // Unsupported unit, default to 24h
+      pumpOverrideUntil = millis() + 8640000L;
+    }
   } else {
+    // No value informed, defult to 24h
     pumpOverrideUntil = millis() + 8640000L;
   }
   publishPumpOverride();
@@ -280,7 +290,7 @@ void checkPumpStatus() {
   // If the pump was not enabled for more than 3 minutes and panel temp is near boiler temp, enable it for 5 seconds for the panel sensor to get an accurate reading.
   if (getCycleEnabled() && !getPumpOverride() && getSolarPanelTemp() >= (getBoilerTemp()-10) && lastTimePumpEnabled + (3L*60L*1000L) < millis()) {
     enablePump();
-    enablePumpOverride(5);
+    enablePumpOverride(5, OVERRIDE_UNIT_SECONDS);
   }
 }
 
@@ -596,13 +606,13 @@ void handlePumpOverrideMessage(String payloadMessage) {
       pumpOverrideDuration = atol(payloadMessage.substring(7, 11).c_str());
     }
     enablePump();
-    enablePumpOverride(pumpOverrideDuration);
+    enablePumpOverride(pumpOverrideDuration, OVERRIDE_UNIT_MINUTES);
   } else if (payloadMessage.startsWith("disable")) {
     if (payloadMessage.charAt(7) == ',') {
       pumpOverrideDuration = atol(payloadMessage.substring(8, 12).c_str());
     }
     disablePump();
-    enablePumpOverride(pumpOverrideDuration);
+    enablePumpOverride(pumpOverrideDuration, OVERRIDE_UNIT_MINUTES);
   } else {
     Serial.println("Message not recognized. Possible values are \"auto\", \"enable,9999\" or \"disable,9999\", where 9999 is the override duration in minutes");
   }
