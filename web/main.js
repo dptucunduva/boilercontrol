@@ -11,7 +11,7 @@ var app = express();
 app.use(cookieParser());
 var appRedirect = express();
 
-/*// HTTP Server. Just redirect to HTTPS
+// HTTP Server. Just redirect to HTTPS
 const httpServer = http.createServer(appRedirect)
 appRedirect.get('*', function(req, res) {  
     res.redirect('https://' + req.headers.host + req.url);
@@ -26,12 +26,7 @@ const credentials = {
 	ca: fs.readFileSync(sslProp.ca, 'utf8')
 };
 const httpsServer = https.createServer(credentials, app)
-httpsServer.listen(8443);*/
-
-// REMOVER
-const httpServer = http.createServer(app)
-httpServer.listen(8080);
-// REMOVER
+httpsServer.listen(8443);
 
 // Authentication
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
@@ -49,8 +44,7 @@ function checkSocketIoAuth(socket, token) {
 }
 
 // Browser socket. Send information to the browser
-//const ioBrowserServer = https.createServer(credentials);
-const ioBrowserServer = http.createServer();
+const ioBrowserServer = https.createServer(credentials);
 ioBrowserServer.listen(8098);
 var browser = require('socket.io')(ioBrowserServer);
 browser.on('connect', function(socket) {
@@ -59,8 +53,7 @@ browser.on('connect', function(socket) {
 
 // Admin socket. Wait for connections from internal agent with current data
 var actuatorData;
-//const ioAdminServer = https.createServer(credentials);
-const ioAdminServer = http.createServer();
+const ioAdminServer = https.createServer(credentials);
 ioAdminServer.listen(8099);
 var admin = require('socket.io')(ioAdminServer);
 admin.on('connect', function(socket) {

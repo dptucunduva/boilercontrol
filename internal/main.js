@@ -121,7 +121,7 @@ setInterval(checkSunTime, 17000);
 
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));
-webAgent = io.connect('http://localhost:8099',
+webAgent = io.connect('https://italopulga.ddns.net:8099',
 	{
 		secure:true,
 		reconnection: true,
