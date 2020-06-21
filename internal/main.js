@@ -1,21 +1,25 @@
 #!/usr/bin/env nodejs
 
 // Module setup
-var express = require('express');
-var app = express();
-var http = require('http');
-var io = require('socket.io-client');
-var fs = require('fs');
-var SunCalc = require('suncalc');
+const express = require('express');
+const app = express();
+const http = require('http');
+const io = require('socket.io-client');
+const fs = require('fs');
+const SunCalc = require('suncalc');
+
+// Database
+const db = require('./database');
 
 // Broker connection config
-var mqtt = require('mqtt');
-var mqttClient  = mqtt.connect('mqtt://mqtt.home', {clientId: 'boiler-control-unit'});
+const mqtt = require('mqtt');
+const mqttClient  = mqtt.connect('mqtt://mqtt.home', {clientId: 'boiler-control-unit'});
 
 // Control variables
 var cycle = "auto";
 var currentStatus = {};
 var nextPublish;
+var nextSave = Date.now() + 10000;
 
 // Connect to MQTT server
 mqttClient.on('connect', function () {
@@ -58,6 +62,7 @@ mqttClient.on('message', function (topic, message) {
 
 	// Force immediate publish
 	nextPublish = Date.now();
+
 });
 
 // Enrich data before publishing it
@@ -89,6 +94,14 @@ function getData() {
 		// Publish at least once every 30s
 		nextPublish = Date.now() + 30000;
 	}
+
+	if (Date.now() >= nextSave) {
+		// Save it to database
+		db.saveIt(Object.assign({},dataToSend));
+
+		// Save once every 3s
+		nextSave = Date.now() + 3000;
+	}
 }
 getData();
 setInterval(getData, 1000);
@@ -117,7 +130,6 @@ function checkSunTime() {
 }
 checkSunTime();
 setInterval(checkSunTime, 17000);
-
 
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));

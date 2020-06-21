@@ -30,8 +30,8 @@ public class TempUpdater implements Runnable {
 				String data = getTemp();
 				String temp = getTempFromJson(data);
 
-				Boolean pumpOn = data.indexOf("\"pumpEnabled\":true") > 0;
-				Boolean heaterOn = data.indexOf("\"heaterEnabled\":true") > 0;
+				Boolean pumpOn = data.indexOf("\"pumpStatus\":\"enabled\"") > 0;
+				Boolean heaterOn = data.indexOf("\"heaterStatus\":\"enabled\"") > 0;
 				
 				if (heaterOn) {
 					trayIcon.setImage(createImage(temp, Colors.HEATER_ON));
@@ -97,7 +97,7 @@ public class TempUpdater implements Runnable {
 	
 	// TODO: Fazer um parse usando uma biblioteca
 	private static String getTempFromJson(String data) {
-		String partial = data.substring(data.indexOf("ilerTemperature\":") + 17);
-		return partial.substring(0, partial.indexOf(","));
+		String partial = data.substring(data.indexOf("reservoirTemp\":\"") + 16);
+		return partial.substring(0, partial.indexOf("."));
 	}
 }
