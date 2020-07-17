@@ -9,7 +9,7 @@ const fs = require('fs');
 const SunCalc = require('suncalc');
 
 // Database
-const db = require('./database');
+//const db = require('./database');
 
 // Broker connection config
 const mqtt = require('mqtt');
@@ -20,6 +20,7 @@ var cycle = "auto";
 var currentStatus = {};
 var nextPublish;
 var nextSave = Date.now() + 10000;
+var lastTempChange = Date.now();
 
 // Connect to MQTT server
 mqttClient.on('connect', function () {
@@ -30,10 +31,18 @@ mqttClient.on('connect', function () {
 mqttClient.on('message', function (topic, message) {
 	switch (topic) {
 		case '/boiler/sensor/reservoir/temperature':
-			currentStatus.reservoirTemp = message.toString();
+			var newReservoirTemp = message.toString();
+			if (newReservoirTemp != currentStatus.reservoirTemp) {
+				lastTempChange = Date.now();
+			}
+			currentStatus.reservoirTemp = newReservoirTemp;
 			break;
 		case '/boiler/sensor/solarpanel/temperature':
-			currentStatus.solarPanelTemp = message.toString();
+			var newSolarPanelTemp = message.toString();
+			if (newSolarPanelTemp != currentStatus.solarPanelTemp) {
+				lastTempChange = Date.now();
+			}
+			currentStatus.solarPanelTemp = newSolarPanelTemp;
 			break;
 		case '/boiler/sensor/heater/status':
 			currentStatus.heaterStatus = message.toString();
@@ -67,13 +76,7 @@ mqttClient.on('message', function (topic, message) {
 
 // Enrich data before publishing it
 function addExtraData(data) {
-	var date = new Date();
-    var hours = date.getHours();
-    var minutes = date.getMinutes();
-    var seconds = date.getSeconds();
-    minutes = minutes < 10 ? '0'+minutes : minutes;
-    seconds = seconds < 10 ? '0'+seconds : seconds;
-	data.updateDt = hours + ':' + minutes + ':' + seconds;
+	data.updateDt = formatTime(new Date());
 
 	// cycle
 	if (cycle == "auto") {
@@ -81,6 +84,14 @@ function addExtraData(data) {
 	} else {
 		data.cycleAuto = false;
 	}
+
+	//Check if the temperature has changed during the last 10 minutes
+	if (lastTempChange < Date.now() - 1000*60*10) {
+		data.problem = true;
+	}else {
+		data.problem = false;
+	}
+	data.lastTempChange = formatTime(new Date(lastTempChange));
 
 	return data;
 }
@@ -97,7 +108,7 @@ function getData() {
 
 	if (Date.now() >= nextSave) {
 		// Save it to database
-		db.saveIt(Object.assign({},dataToSend));
+		//db.saveIt(Object.assign({},dataToSend));
 
 		// Save once every 3s
 		nextSave = Date.now() + 3000;
@@ -130,6 +141,15 @@ function checkSunTime() {
 }
 checkSunTime();
 setInterval(checkSunTime, 17000);
+
+function formatTime(date) {
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    minutes = minutes < 10 ? '0'+minutes : minutes;
+    seconds = seconds < 10 ? '0'+seconds : seconds;
+	return hours + ':' + minutes + ':' + seconds;
+}
 
 // Connect to web agent.
 const authProp = JSON.parse(fs.readFileSync('auth.json','utf8'));

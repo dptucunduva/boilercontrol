@@ -199,6 +199,14 @@
                                         $("#cycle-on").removeClass("active");
                                 }
                         }
+
+                        if (data.problem) {
+                                $("#problem").removeClass("bg-primary");
+                                $("#problem").addClass("bg-danger");
+                        } else {
+                                $("#problem").removeClass("bg-danger");
+                                $("#problem").addClass("bg-primary");
+                        }
                 }
 
                 function formatDate(utcDate) {
@@ -215,7 +223,7 @@
 <body>
         <br/>
         <div class="container-fluid">
-                <nav class="navbar navbar-dark bg-primary">
+                <nav id="problem" class="navbar navbar-dark bg-primary">
                   <span class="navbar-brand mb-0 h1">Controle do aquecedor solar<small id="updateDt"></small></span>
                 </nav>
                 <div class="jumbotron">
