@@ -125,7 +125,11 @@
                 });
 
                 function showData(data) {
-                        $("#updateDt").html(" - Atualizado às " + data.updateDt);
+			if (data.problem) {
+	                        $("#updateDt").html(" - Última atualização às " + data.lastTempChange);
+			} else {
+	                        $("#updateDt").html(" - Atualizado às " + data.updateDt);
+			}
                         $("#heater-range").html(data.heaterOnTemp + "&#8451; a " + data.heaterOffTemp + "&#8451;");
                         $("#panel-temp").html(data.solarPanelTemp + "&#8451;");
                         if (data.reservoirTemp > 5 && data.reservoirTemp < 90) {
