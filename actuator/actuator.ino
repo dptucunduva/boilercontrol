@@ -69,23 +69,42 @@ void updateTemp() {
     Serial.print("Solar panel sensor temperature read: ");
     Serial.print(readSolarPanelTemp);
     Serial.print("°C\n");
- 
-    // Workaround for eventual innacurate readings. 
+
+    // COMMENTED: Workaround for eventual innacurate readings. 
     // 85 (boiler) or 45 (panels) are temperaturees that the sensor returns when there is an error reading, so we ignore it.
-    // Max temp change is 5 degrees between readings. If temp changes more than 5C, ignore it. It is probably a misread.
-    if ( readBoilerTemp != boilerTemp &&
-         readBoilerTemp > 5 && readBoilerTemp < 99 && readBoilerTemp != 85 
-         //&& (readBoilerTemp != 44 || abs(readBoilerTemp - boilerTemp) < 5) 
-         ) {
-      boilerTemp = readBoilerTemp;
-      publishBoilerTemp();
+    if ( readBoilerTemp > 5 && readBoilerTemp < 99 ) { // && readBoilerTemp != 85 ) {
+      if (readBoilerTemp != boilerTemp) {
+        boilerTemp = readBoilerTemp;
+        publishBoilerTemp();
+      }
+      boilerReadError = 0;
+    } else {
+      boilerReadError++;
+      Serial.print("Boiler read error count increased to ");
+      Serial.println(boilerReadError);
     }
-    if ( readSolarPanelTemp != solarPanelTemp &&
-         readSolarPanelTemp > 5 && readSolarPanelTemp < 99 && readSolarPanelTemp != 45
-         //&& (solarPanelTemp == 44 || abs(readSolarPanelTemp - solarPanelTemp) < 5) 
-         ) {
-      solarPanelTemp = readSolarPanelTemp;
-      publishSolarPanelTemp();
+    if ( readSolarPanelTemp > 5 && readSolarPanelTemp < 99) { // && readSolarPanelTemp != 45 ) {
+      if (readSolarPanelTemp != solarPanelTemp) {
+        solarPanelTemp = readSolarPanelTemp;
+        publishSolarPanelTemp();
+      }
+      solarPanelReadError = 0;
+    } else {
+      solarPanelReadError++;
+      Serial.print("Solar panel read error count increased to ");
+      Serial.println(boilerReadError);
+    }
+
+    // Check if we have reached the error limit.
+    if (boilerReadError > 150) {
+      boilerReadError = 0;
+      // PUBLISH ERROR
+      publishBoilerReadError();
+    }
+    if (solarPanelReadError > 150) {
+      solarPanelReadError = 0;
+      // PUBLISH ERROR
+      publishSolarPanelReadError();
     }
   }
 }
@@ -299,6 +318,9 @@ void checkPumpStatus() {
 /** 
  *  Communication setup functions
  */
+// Reset arduino
+void(* resetFunc) (void) = 0; 
+
 // Setup and start ethernet
 void startEthernet() {
   Serial.println("(Re)Starting ethernet conectivity");
@@ -348,6 +370,7 @@ void startMQTT() {
     mqttClient.subscribe(HEATER_SET_ON_TEMP);
     mqttClient.subscribe(HEATER_SET_OFF_TEMP);
     mqttClient.subscribe(REQUEST_FULL_REFRESH_TOPIC);
+    mqttClient.subscribe(RESET_TOPIC);
     // Now publish a full status update.
     publishAll();
   }
@@ -396,6 +419,26 @@ void publishAll() {
   publishHeaterOverride();
   publishPumpOverride();
   Serial.println("Full publish finished");
+}
+
+// Publish Solar Panel read error
+void publishSolarPanelReadError() {
+  String message = "solarPanelTempSensor";
+  if (mqttClient.publish(EMERGENCY_TOPIC,message.c_str(),false)) {
+    Serial.println("Published solar panel read error alert");
+  }else {
+    Serial.println("Error publishing solar panel read error alert");
+  }
+}
+
+// Publish Boiler read error
+void publishBoilerReadError() {
+  String message = "boilerTempSensor";
+  if (mqttClient.publish(EMERGENCY_TOPIC,message.c_str(),false)) {
+    Serial.println("Published boiler read error alert");
+  }else {
+    Serial.println("Error publishing boiler read error alert");
+  }
 }
 
 // Publish boiler temperature
@@ -571,6 +614,8 @@ void handleCommand(char* topic, byte* payload, unsigned int length) {
     handleHeaterRangeMessage(false, payloadMessage);
   } else if (strcmp(topic, REQUEST_FULL_REFRESH_TOPIC) == 0) {
     publishAll();
+  } else if (strcmp(topic, RESET_TOPIC) == 0) {
+    resetFunc();
   } else {
     Serial.println("Topic not recognized, discarding message");
   }

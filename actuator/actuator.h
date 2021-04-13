@@ -40,6 +40,8 @@ float heaterOffTemp = HEATER_OFF_TEMP_DEFAULT;
 boolean heaterEnabled;
 boolean heaterOverride;
 unsigned long heaterOverrideUntil;
+unsigned long solarPanelReadError = 0;
+unsigned long boilerReadError = 0;
 
 // Pump setup
 boolean pumpEnabled;
@@ -71,9 +73,11 @@ const char* HEATER_OVERRIDE_TOPIC = "/boiler/sensor/heater/override";
 const char* PUMP_STATUS_TOPIC = "/boiler/sensor/pump/status";
 const char* PUMP_OVERRIDE_TOPIC = "/boiler/sensor/pump/override";
 const char* CYCLE_STATUS_TOPIC = "/boiler/sensor/cycle/status";
+const char* EMERGENCY_TOPIC = "/boiler/emergency";
 
 // Channels that we will listen to
 const char* REQUEST_FULL_REFRESH_TOPIC = "/boiler/requestfullrefresh";
+const char* RESET_TOPIC = "/boiler/actuator/reset";
 const char* HEATER_SET_OVERRIDE_TOPIC = "/boiler/actuator/heater/setoverride";
 const char* HEATER_SET_ON_TEMP = "/boiler/actuator/heater/setontemp";
 const char* HEATER_SET_OFF_TEMP = "/boiler/actuator/heater/setofftemp";

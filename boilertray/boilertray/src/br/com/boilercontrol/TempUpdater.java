@@ -13,7 +13,7 @@ import java.net.URL;
 
 public class TempUpdater implements Runnable {
 
-	private static final String AUTH_HEADER = "Basic ZHB0dWN1bmR1dmE6YWQzbDFuMA==";
+	private static final String AUTH_HEADER = "Basic Ym9pbGVyY29udHJvbDphYmNkMTIzNCFAIyQ=";
 
 	private TrayIcon trayIcon;
 	
