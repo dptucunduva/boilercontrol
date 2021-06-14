@@ -8,8 +8,21 @@ const io = require('socket.io-client');
 const fs = require('fs');
 const SunCalc = require('suncalc');
 
-// Database
-//const db = require('./database');
+// Telegram Bot
+var telegramEnabled = true;
+var nextTelegramNotification = Date.now();
+var bot;
+var telegramJson;
+if (fs.existsSync('telegram.json')) {
+	telegramJson = JSON.parse(fs.readFileSync('telegram.json','utf8'));
+	const TeleBot = require('telebot');
+	bot = new TeleBot(telegramJson.apiKey);
+	bot.on('/*', (msg) => {
+		return bot.sendMessage(msg.from.id, `Hello, ${ msg.from.first_name }! This is a private bot, no commands are available. No unauthorized access is allowed, sorry. Thank you!`);
+	});
+	bot.start();
+	telegramEnabled = true;
+}
 
 // Broker connection config
 const mqtt = require('mqtt');
@@ -19,7 +32,6 @@ const mqttClient  = mqtt.connect('mqtt://mqtt.home', {clientId: 'boiler-control-
 var cycle = "auto";
 var currentStatus = {};
 var nextPublish;
-var nextSave = Date.now() + 10000;
 var lastTempChange = Date.now();
 
 // Connect to MQTT server
@@ -93,6 +105,12 @@ function addExtraData(data) {
 	}
 	data.lastTempChange = formatTime(new Date(lastTempChange));
 
+	// Send message to telegram bot
+	if (telegramEnabled && data.problem && nextTelegramNotification < Date.now()) {
+		bot.sendMessage(telegramJson.id, "System problem! Last temp update was at " + data.lastTempChange);
+		nextTelegramNotification = Date() + 1000*60*10; // Warn once every 10 minutes.
+	}
+
 	return data;
 }
 
@@ -104,14 +122,6 @@ function getData() {
 
 		// Publish at least once every 30s
 		nextPublish = Date.now() + 30000;
-	}
-
-	if (Date.now() >= nextSave) {
-		// Save it to database
-		//db.saveIt(Object.assign({},dataToSend));
-
-		// Save once every 3s
-		nextSave = Date.now() + 3000;
 	}
 }
 getData();
