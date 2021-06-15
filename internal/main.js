@@ -108,7 +108,7 @@ function addExtraData(data) {
 	// Send message to telegram bot
 	if (telegramEnabled && data.problem && nextTelegramNotification < Date.now()) {
 		bot.sendMessage(telegramJson.id, "System problem! Last temp update was at " + data.lastTempChange);
-		nextTelegramNotification = Date() + 1000*60*10; // Warn once every 10 minutes.
+		nextTelegramNotification = Date.now() + 1000*60*10; // Warn once every 10 minutes.
 	}
 
 	return data;
