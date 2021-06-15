@@ -17,7 +17,7 @@ if (fs.existsSync('telegram.json')) {
 	telegramJson = JSON.parse(fs.readFileSync('telegram.json','utf8'));
 	const TeleBot = require('telebot');
 	bot = new TeleBot(telegramJson.apiKey);
-	bot.on('/*', (msg) => {
+	bot.on('*', (msg) => {
 		return bot.sendMessage(msg.from.id, `Hello, ${ msg.from.first_name }! This is a private bot, no commands are available. No unauthorized access is allowed, sorry. Thank you!`);
 	});
 	bot.start();
